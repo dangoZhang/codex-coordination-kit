@@ -4,4 +4,5 @@ __pycache__/
 .pytest_cache/
 coordination.config.json
 reviews/*.json
+rewrite_requests/*.md
 tools/StatusBoard/.build/

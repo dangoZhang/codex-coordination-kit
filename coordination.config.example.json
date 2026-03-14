@@ -6,5 +6,7 @@
     "codex"
   ],
   "codex_exec_args": [],
-  "auto_finish_on_approve": false
+  "auto_finish_on_approve": false,
+  "auto_rewrite_on_block": false,
+  "max_auto_rewrite_attempts": 2
 }

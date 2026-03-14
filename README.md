@@ -31,6 +31,7 @@ Actual macOS StatusBoard preview window, captured with sanitized sample data:
 - `scripts/auto_review_gate.py`: runs `codex exec` reviews against thread branches
 - `scripts/export_status.py`: emits JSON for dashboards or custom boards
 - `tools/StatusBoard/`: macOS menu bar app for a native status board
+- `rewrite_requests/`: gitignored rewrite recall artifacts emitted after blocked reviews
 
 ## Repo Model
 
@@ -109,6 +110,7 @@ bash thread_branch_flow.sh finish \
 
 - coordination repo `post-commit`: scans `TASK_BOARD.md` for `IN_PROGRESS` rows and auto-creates thread worktrees for threads with `auto_branch: true`
 - target repo `post-commit`: runs `codex exec --output-schema` against the current thread branch and writes the gate result into `reviews/`, `HANDOFFS.md`, and `COMM_LOG.md`
+- if a review returns `BLOCK_MERGE_TO_BASE`, the kit emits a rewrite request under `rewrite_requests/` and can optionally re-invoke the applicant thread with `codex exec`
 
 The installer preserves an existing `post-commit` hook by moving it to `post-commit.pre-codex-coordination` and chaining to it.
 
@@ -141,6 +143,8 @@ Fields:
 - `codex_command`: command prefix used to invoke Codex, for example `["codex"]`
 - `codex_exec_args`: extra args added before the review prompt, for example a model flag
 - `auto_finish_on_approve`: whether an approved review should immediately run `finish`
+- `auto_rewrite_on_block`: whether a blocked review should automatically re-invoke the applicant thread on the current worktree
+- `max_auto_rewrite_attempts`: loop guard for auto rewrite retries on the same branch
 
 ## Git Notes
 

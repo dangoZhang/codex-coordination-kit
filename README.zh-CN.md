@@ -31,6 +31,7 @@ Codex Coordination Kit 用来把一个普通 git 仓库改造成多线程 Codex 
 - `scripts/auto_review_gate.py`：在线程分支提交后调用 `codex exec` 做自动 review
 - `scripts/export_status.py`：导出状态 JSON，供看板或其它工具使用
 - `tools/StatusBoard/`：原生 macOS 菜单栏状态看板
+- `rewrite_requests/`：review 被阻塞后生成的重写召回单，默认不纳入版本控制
 
 ## 仓库模型
 
@@ -109,6 +110,7 @@ bash thread_branch_flow.sh finish \
 
 - 控制面仓库 `post-commit`：扫描 `TASK_BOARD.md`，为 `auto_branch: true` 且已进入 `IN_PROGRESS` 的线程自动创建 worktree
 - 目标仓库 `post-commit`：对当前线程分支执行 `codex exec --output-schema`，并把结果写入 `reviews/`、`HANDOFFS.md`、`COMM_LOG.md`
+- 如果 review 返回 `BLOCK_MERGE_TO_BASE`，工具会在 `rewrite_requests/` 下生成重写召回单；若开启配置，还会自动重新调用申请者线程继续修复
 
 如果已有 `post-commit` hook，安装器会先把原文件挪到 `post-commit.pre-codex-coordination`，然后串起来继续执行。
 
@@ -141,6 +143,8 @@ bash thread_branch_flow.sh finish \
 - `codex_command`：调用 Codex 的命令前缀，例如 `["codex"]`
 - `codex_exec_args`：插入到 review 调用里的额外参数，例如 model 参数
 - `auto_finish_on_approve`：review 通过后是否自动执行 `finish`
+- `auto_rewrite_on_block`：review 被阻塞后，是否自动在当前 worktree 重新调用申请者线程修复
+- `max_auto_rewrite_attempts`：同一线程分支上的自动重写最大尝试次数，用来防止死循环
 
 ## Git 说明
 

@@ -20,6 +20,8 @@ class CoordinationConfig:
     codex_command: list[str]
     codex_exec_args: list[str]
     auto_finish_on_approve: bool
+    auto_rewrite_on_block: bool
+    max_auto_rewrite_attempts: int
 
 
 def coordination_root() -> Path:
@@ -57,6 +59,8 @@ def load_config(root: Path | None = None) -> CoordinationConfig:
         codex_command=codex_command,
         codex_exec_args=codex_exec_args,
         auto_finish_on_approve=bool(raw.get("auto_finish_on_approve", False)),
+        auto_rewrite_on_block=bool(raw.get("auto_rewrite_on_block", False)),
+        max_auto_rewrite_attempts=max(0, int(raw.get("max_auto_rewrite_attempts", 2))),
     )
 
 
@@ -73,6 +77,18 @@ def run(cmd: list[str], cwd: Path | None = None, check: bool = True) -> subproce
 def git(repo: Path, *args: str, check: bool = True) -> str:
     result = run(["git", "-C", str(repo), *args], check=check)
     return result.stdout.strip()
+
+
+def current_worktree(default_repo: Path) -> Path:
+    result = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 0 and result.stdout.strip():
+        return Path(result.stdout.strip()).resolve()
+    return default_repo.resolve()
 
 
 def now_stamp() -> str:
@@ -105,4 +121,3 @@ def repo_relative_path(parent: Path, child: Path) -> str | None:
     if value == ".":
         return None
     return f"{value}/" if child.is_dir() else value
-
