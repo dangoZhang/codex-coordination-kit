@@ -75,6 +75,8 @@ CODEX_COORDINATION_SNAPSHOT_FILE=tools/StatusBoard/SampleData/sample_status.json
 tools/StatusBoard/run.sh --preview-window
 ```
 
+The board shows the duration of the last completed thread run, measured from the latest `kickoff` log to the latest follow-up log for that same run. Thread registration and collaboration guidance open in detached windows, so you do not lose the form when the menubar popover closes.
+
 ## Standard Workflow
 
 1. Claim a task in `TASK_BOARD.md` and move it to `IN_PROGRESS`.

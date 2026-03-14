@@ -75,6 +75,8 @@ CODEX_COORDINATION_SNAPSHOT_FILE=tools/StatusBoard/SampleData/sample_status.json
 tools/StatusBoard/run.sh --preview-window
 ```
 
+看板里显示的是“上一次完整运行实际耗时”，也就是同一线程最近一次 `kickoff` 到后续最新一条日志之间的时长，不是“距离现在过了多久”。线程注册窗口和协作说明窗口都会以独立窗口打开，所以菜单栏弹层收起后表单也不会丢。
+
 ## 标准工作流
 
 1. 在 `TASK_BOARD.md` 中认领任务，并改成 `IN_PROGRESS`。

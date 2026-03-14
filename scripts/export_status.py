@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass
+from datetime import datetime
 from typing import Optional
 
 from common import git, load_config, load_threads
@@ -46,6 +47,8 @@ def parse_task_board(path) -> list[Task]:
 def parse_comm_log(path) -> dict[str, dict]:
     latest: dict[str, dict] = {}
     kickoff_latest: dict[str, dict] = {}
+    last_invocation: dict[str, dict] = {}
+    active_kickoff: dict[str, tuple[dict, datetime]] = {}
     in_code_block = False
     for idx, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
         if line.strip().startswith("```"):
@@ -67,6 +70,10 @@ def parse_comm_log(path) -> dict[str, dict]:
             msg = rest2[third + 2 :]
         except ValueError:
             continue
+        try:
+            parsed_ts = datetime.strptime(ts, "%Y-%m-%d %H:%M")
+        except ValueError:
+            parsed_ts = None
         latest[thread] = {
             "timestamp": ts,
             "type": kind,
@@ -74,12 +81,35 @@ def parse_comm_log(path) -> dict[str, dict]:
             "line_no": idx,
         }
         if kind == "kickoff":
-            kickoff_latest[thread] = {
+            kickoff = {
                 "timestamp": ts,
                 "message": msg,
                 "line_no": idx,
             }
-    return {"latest": latest, "kickoff_latest": kickoff_latest}
+            kickoff_latest[thread] = kickoff
+            if parsed_ts:
+                active_kickoff[thread] = (kickoff, parsed_ts)
+            else:
+                active_kickoff.pop(thread, None)
+            continue
+
+        kickoff_row, start_ts = active_kickoff.get(thread, (None, None))
+        if not kickoff_row or not start_ts or not parsed_ts or parsed_ts < start_ts:
+            continue
+        last_invocation[thread] = {
+            "start_timestamp": kickoff_row["timestamp"],
+            "end_timestamp": ts,
+            "elapsed_seconds": max(int((parsed_ts - start_ts).total_seconds()), 0),
+            "end_type": kind,
+            "start_line_no": kickoff_row["line_no"],
+            "end_line_no": idx,
+        }
+
+    return {
+        "latest": latest,
+        "kickoff_latest": kickoff_latest,
+        "last_invocation": last_invocation,
+    }
 
 
 def select_task(thread_id: str, tasks: list[Task]) -> Optional[Task]:
@@ -136,12 +166,14 @@ def main() -> None:
         threads.append(
             {
                 "thread": thread_id,
+                "slot": row["slot"],
                 "display_name": row["name"],
                 "role": row["role"],
                 "auto_branch": row["auto_branch"],
                 "task": asdict(task) if task else None,
                 "last_log": logs["latest"].get(thread_id),
                 "runtime_start": logs["kickoff_latest"].get(thread_id),
+                "last_invocation": logs["last_invocation"].get(thread_id),
                 "branches": {
                     "expected_prefix": prefix,
                     "local": [{"name": branch, "worktree": worktrees.get(branch)} for branch in local_matches],

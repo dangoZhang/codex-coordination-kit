@@ -17,6 +17,7 @@
   "threads": [
     {
       "thread": "thread0",
+      "slot": "00",
       "display_name": "00-Build",
       "role": "Coordination / Build",
       "auto_branch": false,
@@ -44,6 +45,7 @@
     },
     {
       "thread": "thread1",
+      "slot": "01",
       "display_name": "01-Backbone",
       "role": "Backend",
       "auto_branch": true,
@@ -57,6 +59,14 @@
         "timestamp": "2026-03-15 00:06",
         "type": "update",
         "message": "Created a clean thread branch and staged backend changes for review."
+      },
+      "last_invocation": {
+        "start_timestamp": "2026-03-15 00:00",
+        "end_timestamp": "2026-03-15 00:06",
+        "elapsed_seconds": 360,
+        "end_type": "update",
+        "start_line_no": 13,
+        "end_line_no": 16
       },
       "runtime_start": {
         "timestamp": "2026-03-15 00:00",
@@ -78,6 +88,7 @@
     },
     {
       "thread": "thread3",
+      "slot": "03",
       "display_name": "03-Review",
       "role": "Review Gate",
       "auto_branch": false,
@@ -91,6 +102,14 @@
         "timestamp": "2026-03-15 00:08",
         "type": "blocker",
         "message": "Waiting for a new handoff before issuing ALLOW_MERGE_TO_BASE."
+      },
+      "last_invocation": {
+        "start_timestamp": "2026-03-15 00:02",
+        "end_timestamp": "2026-03-15 00:08",
+        "elapsed_seconds": 360,
+        "end_type": "blocker",
+        "start_line_no": 18,
+        "end_line_no": 22
       },
       "runtime_start": {
         "timestamp": "2026-03-15 00:02",
@@ -110,6 +129,7 @@
     },
     {
       "thread": "thread4",
+      "slot": "04",
       "display_name": "04-Test",
       "role": "Test / Experiment",
       "auto_branch": false,
@@ -123,6 +143,14 @@
         "timestamp": "2026-03-15 00:07",
         "type": "update",
         "message": "Collected regression evidence for the last backend change."
+      },
+      "last_invocation": {
+        "start_timestamp": "2026-03-15 00:03",
+        "end_timestamp": "2026-03-15 00:07",
+        "elapsed_seconds": 240,
+        "end_type": "update",
+        "start_line_no": 21,
+        "end_line_no": 25
       },
       "runtime_start": {
         "timestamp": "2026-03-15 00:03",
@@ -142,6 +170,7 @@
     },
     {
       "thread": "thread9",
+      "slot": "09",
       "display_name": "09-Research",
       "role": "Research",
       "auto_branch": true,
@@ -161,6 +190,7 @@
     },
     {
       "thread": "thread11",
+      "slot": "11",
       "display_name": "11-Readme",
       "role": "Readme / Docs",
       "auto_branch": true,
@@ -174,6 +204,14 @@
         "timestamp": "2026-03-15 00:10",
         "type": "update",
         "message": "Replaced browser mock preview with the real menubar app screenshot."
+      },
+      "last_invocation": {
+        "start_timestamp": "2026-03-15 00:05",
+        "end_timestamp": "2026-03-15 00:10",
+        "elapsed_seconds": 300,
+        "end_type": "update",
+        "start_line_no": 24,
+        "end_line_no": 27
       },
       "runtime_start": {
         "timestamp": "2026-03-15 00:05",
