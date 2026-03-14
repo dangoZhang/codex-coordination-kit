@@ -1,0 +1,10 @@
+{
+  "target_repo": "/absolute/path/to/your/target-repo",
+  "base_branch": "main",
+  "worktree_root": "/absolute/path/to/your/target-repo/.codex-worktrees",
+  "codex_command": [
+    "codex"
+  ],
+  "codex_exec_args": [],
+  "auto_finish_on_approve": false
+}

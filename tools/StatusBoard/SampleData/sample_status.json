@@ -1,0 +1,195 @@
+{
+  "coordination_root": "/sample/codex-coordination-kit",
+  "target_repo_root": "/sample/target-repo",
+  "base_branch": "main",
+  "generated_at": "2026-03-15T00:10:00",
+  "repo": {
+    "current_branch": "main",
+    "dirty": false,
+    "legacy_local_branches": []
+  },
+  "totals": {
+    "blocked": 1,
+    "in_progress": 3,
+    "todo": 2,
+    "done": 4
+  },
+  "threads": [
+    {
+      "thread": "thread0",
+      "display_name": "00-Build",
+      "role": "Coordination / Build",
+      "auto_branch": false,
+      "task": {
+        "id": "T0-SETUP-001",
+        "title": "Install hooks and validate branch policy",
+        "status": "IN_PROGRESS",
+        "line_no": 10
+      },
+      "last_log": {
+        "timestamp": "2026-03-15 00:01",
+        "type": "kickoff",
+        "message": "Bootstrapped the coordination workspace and started live validation."
+      },
+      "runtime_start": {
+        "timestamp": "2026-03-15 00:01",
+        "message": "Bootstrapped the coordination workspace and started live validation.",
+        "line_no": 12
+      },
+      "branches": {
+        "expected_prefix": "codex/thread0-",
+        "local": [],
+        "remote": []
+      }
+    },
+    {
+      "thread": "thread1",
+      "display_name": "01-Backbone",
+      "role": "Backend",
+      "auto_branch": true,
+      "task": {
+        "id": "T1-BRANCH-001",
+        "title": "Prepare backend worktree for handoff-ready changes",
+        "status": "DONE",
+        "line_no": 11
+      },
+      "last_log": {
+        "timestamp": "2026-03-15 00:06",
+        "type": "update",
+        "message": "Created a clean thread branch and staged backend changes for review."
+      },
+      "runtime_start": {
+        "timestamp": "2026-03-15 00:00",
+        "message": "Started backend branch setup.",
+        "line_no": 13
+      },
+      "branches": {
+        "expected_prefix": "codex/thread1-",
+        "local": [
+          {
+            "name": "codex/thread1-api-cleanup",
+            "worktree": "/sample/target-repo/.codex-worktrees/codex__thread1-api-cleanup"
+          }
+        ],
+        "remote": [
+          "origin/codex/thread1-api-cleanup"
+        ]
+      }
+    },
+    {
+      "thread": "thread3",
+      "display_name": "03-Review",
+      "role": "Review Gate",
+      "auto_branch": false,
+      "task": {
+        "id": "T3-GATE-001",
+        "title": "Wait for a reviewable producer commit",
+        "status": "BLOCKED",
+        "line_no": 13
+      },
+      "last_log": {
+        "timestamp": "2026-03-15 00:08",
+        "type": "blocker",
+        "message": "Waiting for a new handoff before issuing ALLOW_MERGE_TO_BASE."
+      },
+      "runtime_start": {
+        "timestamp": "2026-03-15 00:02",
+        "message": "Opened review queue.",
+        "line_no": 18
+      },
+      "branches": {
+        "expected_prefix": "codex/thread3-",
+        "local": [
+          {
+            "name": "codex/thread3-review",
+            "worktree": "/sample/target-repo/.codex-worktrees/codex__thread3-review"
+          }
+        ],
+        "remote": []
+      }
+    },
+    {
+      "thread": "thread4",
+      "display_name": "04-Test",
+      "role": "Test / Experiment",
+      "auto_branch": false,
+      "task": {
+        "id": "T4-TEST-001",
+        "title": "Collect regression evidence on the latest approved branch",
+        "status": "IN_PROGRESS",
+        "line_no": 14
+      },
+      "last_log": {
+        "timestamp": "2026-03-15 00:07",
+        "type": "update",
+        "message": "Collected regression evidence for the last backend change."
+      },
+      "runtime_start": {
+        "timestamp": "2026-03-15 00:03",
+        "message": "Started regression pass.",
+        "line_no": 21
+      },
+      "branches": {
+        "expected_prefix": "codex/thread4-",
+        "local": [
+          {
+            "name": "codex/thread4-regression-pass",
+            "worktree": "/sample/target-repo/.codex-worktrees/codex__thread4-regression-pass"
+          }
+        ],
+        "remote": []
+      }
+    },
+    {
+      "thread": "thread9",
+      "display_name": "09-Research",
+      "role": "Research",
+      "auto_branch": true,
+      "task": {
+        "id": "T9-SCOPE-001",
+        "title": "Queue a research spike after the current release",
+        "status": "TODO",
+        "line_no": 19
+      },
+      "last_log": null,
+      "runtime_start": null,
+      "branches": {
+        "expected_prefix": "codex/thread9-",
+        "local": [],
+        "remote": []
+      }
+    },
+    {
+      "thread": "thread11",
+      "display_name": "11-Readme",
+      "role": "Readme / Docs",
+      "auto_branch": true,
+      "task": {
+        "id": "T11-DOC-001",
+        "title": "Ship bilingual docs and real macOS board preview",
+        "status": "IN_PROGRESS",
+        "line_no": 20
+      },
+      "last_log": {
+        "timestamp": "2026-03-15 00:10",
+        "type": "update",
+        "message": "Replaced browser mock preview with the real menubar app screenshot."
+      },
+      "runtime_start": {
+        "timestamp": "2026-03-15 00:05",
+        "message": "Started README publishing pass.",
+        "line_no": 24
+      },
+      "branches": {
+        "expected_prefix": "codex/thread11-",
+        "local": [
+          {
+            "name": "codex/thread11-docs-preview",
+            "worktree": "/sample/target-repo/.codex-worktrees/codex__thread11-docs-preview"
+          }
+        ],
+        "remote": []
+      }
+    }
+  ]
+}

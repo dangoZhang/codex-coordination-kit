@@ -1,0 +1,7 @@
+*.pyc
+__pycache__/
+.DS_Store
+.pytest_cache/
+coordination.config.json
+reviews/*.json
+tools/StatusBoard/.build/
