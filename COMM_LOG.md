@@ -9,5 +9,5 @@ Use one line per event:
 Example:
 
 ```text
-YYYY-MM-DD HH:MM thread0 kickoff line goes here
+[2026-03-16 10:00] [thread0] [type: kickoff] Claimed T0-PM-001 and updated the release scope.
 ```

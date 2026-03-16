@@ -45,6 +45,18 @@ Codex Coordination Kit 用来把一个普通 git 仓库改造成多线程 Codex 
 
 控制面负责规则、日志和自动化；业务仓库负责真正被跟踪的代码。各线程在目标仓库的独立 worktree 中工作，并从基线分支创建自己的线程分支。
 
+## 默认 Demo
+
+这个仓库现在自带一个精简的 5 线程 demo，方便你开箱即用地拿它自己来演练协作机制：
+
+- `thread0` / `00-Product`：产品经理与协作 owner
+- `thread1` / `01-Backend`：Python 自动化、hooks 和 review backend
+- `thread2` / `02-Board`：原生 StatusBoard 前端
+- `thread3` / `03-Review`：review gate
+- `thread4` / `04-Readme`：README 和文档
+
+你可以直接把它当 demo 用，也可以编辑 `THREADS.json`、`TASK_BOARD.md`、`OWNERSHIP.md`、`THREAD_BRIEFS.md` 换成自己的模板。
+
 ## 快速开始
 
 1. 把这个仓库 clone 到你希望放控制面的目录。
@@ -95,7 +107,7 @@ tools/StatusBoard/run.sh --preview-window
 2. 让控制面仓库 hook 自动建 branch，或者手动执行：
 
 ```bash
-bash thread_branch_flow.sh start --thread thread11 --scope docs-refresh --task T11-DOC-001 --note "kickoff note"
+bash thread_branch_flow.sh start --thread thread2 --scope board-polish --task T2-BOARD-001 --note "kickoff note"
 ```
 
 3. 只在目标仓库生成出来的 worktree 中改代码。
@@ -113,9 +125,9 @@ bash thread_branch_flow.sh audit
 
 ```bash
 bash thread_branch_flow.sh finish \
-  --branch codex/thread11-docs-refresh \
-  --review-ref H-T3-THREAD11-AUTO-20260314123456 \
-  --task T11-DOC-001 \
+  --branch codex/thread2-board-polish \
+  --review-ref H-T3-THREAD2-AUTO-20260314123456 \
+  --task T2-BOARD-001 \
   --note "merged after thread3 allow" \
   --cleanup-source
 ```
@@ -123,8 +135,8 @@ bash thread_branch_flow.sh finish \
 如果你不想手工分别改任务板和通信日志，也可以直接用：
 
 ```bash
-python3 scripts/coord_task_event.py start --thread thread11 --task T11-DOC-001 --note "kickoff note"
-python3 scripts/coord_task_event.py finish --thread thread11 --task T11-DOC-001 --note "completion note"
+python3 scripts/coord_task_event.py start --thread thread2 --task T2-BOARD-001 --note "kickoff note"
+python3 scripts/coord_task_event.py finish --thread thread2 --task T2-BOARD-001 --note "completion note"
 ```
 
 ## Hook 行为

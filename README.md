@@ -45,6 +45,18 @@ This repo is the control plane. Your product repo stays separate.
 
 The control plane keeps governance, logs, and automation. The product repo keeps tracked application code. Thread work happens in worktrees created from the target repo base branch.
 
+## Default Demo
+
+The tracked template now ships with a compact 5-thread demo so the kit can coordinate on itself out of the box:
+
+- `thread0` / `00-Product`: product manager and coordination owner
+- `thread1` / `01-Backend`: Python automation, hooks, and review backend
+- `thread2` / `02-Board`: native StatusBoard frontend
+- `thread3` / `03-Review`: review gate
+- `thread4` / `04-Readme`: README and docs
+
+You can keep this as a working demo or replace it by editing `THREADS.json`, `TASK_BOARD.md`, `OWNERSHIP.md`, and `THREAD_BRIEFS.md`.
+
 ## Quick Start
 
 1. Clone this repo where you want the control plane to live.
@@ -95,7 +107,7 @@ The board shows the duration of the last completed thread run, measured from the
 2. Let the coordination repo hook auto-create a compliant branch, or create one manually:
 
 ```bash
-bash thread_branch_flow.sh start --thread thread11 --scope docs-refresh --task T11-DOC-001 --note "kickoff note"
+bash thread_branch_flow.sh start --thread thread2 --scope board-polish --task T2-BOARD-001 --note "kickoff note"
 ```
 
 3. Work only inside the generated target-repo worktree.
@@ -113,9 +125,9 @@ Merge after an approved handoff:
 
 ```bash
 bash thread_branch_flow.sh finish \
-  --branch codex/thread11-docs-refresh \
-  --review-ref H-T3-THREAD11-AUTO-20260314123456 \
-  --task T11-DOC-001 \
+  --branch codex/thread2-board-polish \
+  --review-ref H-T3-THREAD2-AUTO-20260314123456 \
+  --task T2-BOARD-001 \
   --note "merged after thread3 allow" \
   --cleanup-source
 ```
@@ -123,8 +135,8 @@ bash thread_branch_flow.sh finish \
 If you want a single command to claim or finish work without editing markdown manually, use:
 
 ```bash
-python3 scripts/coord_task_event.py start --thread thread11 --task T11-DOC-001 --note "kickoff note"
-python3 scripts/coord_task_event.py finish --thread thread11 --task T11-DOC-001 --note "completion note"
+python3 scripts/coord_task_event.py start --thread thread2 --task T2-BOARD-001 --note "kickoff note"
+python3 scripts/coord_task_event.py finish --thread thread2 --task T2-BOARD-001 --note "completion note"
 ```
 
 ## Hook Behavior

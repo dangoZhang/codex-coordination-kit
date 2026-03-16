@@ -2,22 +2,22 @@
   {
     "id": "thread0",
     "slot": "00",
-    "name": "00-Build",
-    "role": "Coordination / Build",
+    "name": "00-Product",
+    "role": "Product Manager / Coordination",
     "auto_branch": false
   },
   {
     "id": "thread1",
     "slot": "01",
-    "name": "01-Backbone",
-    "role": "Backend",
+    "name": "01-Backend",
+    "role": "Backend / Automation",
     "auto_branch": true
   },
   {
     "id": "thread2",
     "slot": "02",
-    "name": "02-Front",
-    "role": "Frontend",
+    "name": "02-Board",
+    "role": "StatusBoard Frontend",
     "auto_branch": true
   },
   {
@@ -30,43 +30,8 @@
   {
     "id": "thread4",
     "slot": "04",
-    "name": "04-Test",
-    "role": "Test / Experiment",
-    "auto_branch": false
-  },
-  {
-    "id": "thread5",
-    "slot": "05",
-    "name": "05-Demo",
-    "role": "Demo / Ops",
-    "auto_branch": false
-  },
-  {
-    "id": "thread6",
-    "slot": "06",
-    "name": "06-Paper",
-    "role": "Validation / Paper",
-    "auto_branch": false
-  },
-  {
-    "id": "thread7",
-    "slot": "07",
-    "name": "07-Data",
-    "role": "Data",
-    "auto_branch": true
-  },
-  {
-    "id": "thread9",
-    "slot": "09",
-    "name": "09-Research",
-    "role": "Research",
-    "auto_branch": true
-  },
-  {
-    "id": "thread11",
-    "slot": "11",
-    "name": "11-Readme",
-    "role": "Readme / Docs",
+    "name": "04-Readme",
+    "role": "README / Docs",
     "auto_branch": true
   }
 ]

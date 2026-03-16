@@ -1,21 +1,21 @@
 # Ownership
 
-## thread0 / 00-Build
+## thread0 / 00-Product
 
-- Owns: this coordination repo, hook automation, branch policy, dashboards
-- Delivers: integrity of `TASK_BOARD.md`, `COMM_LOG.md`, `HANDOFFS.md`, and workflow scripts
+- Owns: product scope, task board quality, acceptance criteria, and the default demo narrative
+- Delivers: coherent `TASK_BOARD.md`, clear handoff requests, and release-ready prioritization
 
-## thread1 / 01-Backbone
+## thread1 / 01-Backend
 
-- Owns: backend and service logic in the target repo
+- Owns: Python scripts, hook orchestration, review/runtime backend, and integration wiring
 - Constraints:
   - start from the configured base branch
   - work on `codex/thread1-<scope>`
   - do not develop directly on the base branch
 
-## thread2 / 02-Front
+## thread2 / 02-Board
 
-- Owns: frontend surface area in the target repo
+- Owns: the macOS StatusBoard frontend, sample snapshots, and board interaction quality
 - Constraints:
   - start from the configured base branch
   - work on `codex/thread2-<scope>`
@@ -27,30 +27,8 @@
   - `ALLOW_MERGE_TO_BASE`
   - `BLOCK_MERGE_TO_BASE`
 
-## thread4 / 04-Test
+## thread4 / 04-Readme
 
-- Owns: tests, experiment records, and reproducibility evidence
-
-## thread5 / 05-Demo
-
-- Owns: demo flow, runbooks, and operational checks
-
-## thread6 / 06-Paper
-
-- Owns: validation evidence, external-facing proof, and reviewer handoff inputs
-
-## thread7 / 07-Data
-
-- Owns: data assets, data quality checks, and normalization logic
-
-## thread9 / 09-Research
-
-- Owns: technical exploration, architecture spikes, and longer-horizon workflow improvements
+- Owns: README, onboarding, demo docs, release notes, and operator instructions
 - Constraints:
-  - tracked changes still require `codex/thread9-<scope>`
-
-## thread11 / 11-Readme
-
-- Owns: README, docs, onboarding notes, and workflow documentation
-- Constraints:
-  - tracked doc changes require `codex/thread11-<scope>`
+  - tracked doc changes require `codex/thread4-<scope>`
