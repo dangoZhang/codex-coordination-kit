@@ -26,7 +26,11 @@ Actual macOS StatusBoard preview window, captured with sanitized sample data:
 - `COMM_LOG.md`: kickoff, blocker, and update log
 - `HANDOFFS.md`: formal review and merge handoffs
 - `thread_branch_flow.sh`: start, audit, and finish branch/worktree flow, with optional task/log updates
+- `register_project.sh`: one-step registration for an existing project, including bootstrap, hook install, and doctor
+- `doctor.sh`: validates config, git wiring, status export, and optional hook installation health
 - `install_hooks.sh`: installs coordination hooks into both repos
+- `scripts/doctor.py`: validates that the kit is wired correctly against the target repo
+- `scripts/self_test.py`: runs an end-to-end smoke test in temporary repos
 - `scripts/auto_branch_claim.py`: creates worktrees when `IN_PROGRESS` tasks are claimed
 - `scripts/auto_review_gate.py`: runs `codex exec` reviews against thread branches
 - `scripts/coord_task_event.py`: updates `TASK_BOARD.md` and `COMM_LOG.md` together for start/finish/block/retry events
@@ -44,19 +48,25 @@ The control plane keeps governance, logs, and automation. The product repo keeps
 ## Quick Start
 
 1. Clone this repo where you want the control plane to live.
-2. Bootstrap it against your target repo.
-3. Install hooks.
-4. Regenerate starter prompts if you change `THREADS.json`.
+2. Register your existing target repo in one step.
+3. Regenerate starter prompts if you change `THREADS.json`.
 
 ```bash
 cd /path/to/codex-coordination-kit
-./bootstrap.sh --target-repo /path/to/target-repo
-./install_hooks.sh
+./register_project.sh --target-repo /path/to/target-repo
 python3 scripts/generate_starter_prompts.py
 python3 scripts/export_status.py
 ```
 
-Bootstrap writes `coordination.config.json`, which is gitignored so local paths stay out of the public repo.
+`register_project.sh` wraps bootstrap, installs hooks into both repos, and runs a doctor check. Bootstrap still exists if you want more manual control:
+
+```bash
+./bootstrap.sh --target-repo /path/to/target-repo --install-hooks --doctor
+```
+
+Bootstrap writes `coordination.config.json`, which is gitignored so local paths stay out of the public repo. If the target repo only has `origin/main` or `origin/master`, bootstrap will create the matching local tracking branch automatically so branch/worktree flow works immediately.
+
+If registration updates the target repo `.gitignore`, commit that change on the target repo base branch before your first merge-back.
 
 Start the native macOS board:
 
@@ -130,6 +140,29 @@ python3 scripts/coord_task_event.py finish --thread thread11 --task T11-DOC-001 
 
 If an existing hook file is already present for the same hook name, the installer moves it to `<hook>.pre-codex-coordination` and chains to it.
 
+## Health Check
+
+Run a full readiness check at any time:
+
+```bash
+./doctor.sh --require-hooks
+```
+
+This validates:
+
+- required coordination files
+- local config and target git repo wiring
+- base branch availability
+- `codex` executable presence
+- status export health
+- installed hook files when `--require-hooks` is used
+
+For a lightweight regression smoke test of the full registration flow, use:
+
+```bash
+python3 scripts/self_test.py
+```
+
 ## Does This Require A Codex Login
 
 The kit itself does not bundle credentials and does not log in for you.
@@ -162,6 +195,15 @@ Fields:
 - `auto_rewrite_on_block`: whether a blocked review should automatically re-invoke the applicant thread on the current worktree
 - `max_auto_rewrite_attempts`: loop guard for auto rewrite retries on the same branch
 - `review_timeout_seconds`: timeout for a single automated review invocation before the hook logs a blocker and exits
+
+Bootstrap flags:
+
+- `--install-hooks`: install hooks as part of bootstrap
+- `--doctor`: run a post-bootstrap health check
+- `--codex-exec-arg`: append an extra `codex exec` argument; repeat as needed
+- `--auto-rewrite-on-block`: enable automatic rewrite recall on blocked review
+- `--max-auto-rewrite-attempts`: cap automatic rewrite retries
+- `--review-timeout-seconds`: configure automated review timeout
 
 ## Git Notes
 

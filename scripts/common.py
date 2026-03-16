@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 from dataclasses import dataclass
 from datetime import datetime
@@ -81,6 +82,20 @@ def git(repo: Path, *args: str, check: bool = True) -> str:
     return result.stdout.strip()
 
 
+def git_ref_exists(repo: Path, ref: str) -> bool:
+    return run(
+        ["git", "-C", str(repo), "show-ref", "--verify", "--quiet", ref],
+        check=False,
+    ).returncode == 0
+
+
+def command_exists(command: str) -> bool:
+    if "/" in command:
+        path = Path(command).expanduser()
+        return path.exists() and os.access(path, os.X_OK)
+    return shutil.which(command) is not None
+
+
 def current_worktree(default_repo: Path) -> Path:
     result = subprocess.run(
         ["git", "rev-parse", "--show-toplevel"],
@@ -114,7 +129,7 @@ def thread_map(root: Path | None = None) -> dict[str, dict[str, Any]]:
     return {row["id"]: row for row in load_threads(root)}
 
 
-def repo_relative_path(parent: Path, child: Path) -> str | None:
+def repo_relative_path(parent: Path, child: Path, *, assume_directory: bool = False) -> str | None:
     try:
         rel = child.resolve().relative_to(parent.resolve())
     except ValueError:
@@ -122,4 +137,4 @@ def repo_relative_path(parent: Path, child: Path) -> str | None:
     value = str(rel).replace("\\", "/")
     if value == ".":
         return None
-    return f"{value}/" if child.is_dir() else value
+    return f"{value}/" if assume_directory or child.is_dir() else value
