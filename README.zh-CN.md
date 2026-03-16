@@ -57,7 +57,12 @@ Codex Coordination Kit 用来把一个普通 git 仓库改造成多线程 Codex 
 
 你可以直接把它当 demo 用，也可以编辑 `THREADS.json`、`TASK_BOARD.md`、`OWNERSHIP.md`、`THREAD_BRIEFS.md` 换成自己的模板。
 
-默认生产线程现在使用“每线程一条长期分支”的模式。执行 `thread_branch_flow.sh start` 时，如果 `codex/threadX` 已经存在，就会直接复用它的 worktree，并在开始编码前把最新基线分支合并进去。
+默认 demo 现在混合了两种分支模式：
+
+- `thread1` 使用持久后端分支 `codex/thread1-mainline`
+- 其它生产线程使用按任务创建的 scoped 分支，例如 `codex/thread2-board-polish`
+
+持久分支通过 `coordination.config.json` 里的 `persistent_branches` 配置。对持久线程执行 `thread_branch_flow.sh start` 时，会复用这条分支并先和最新基线分支同步；普通线程仍然按任务新建 `codex/threadX-<scope>` 分支。
 
 如果你把这个仓库直接注册给它自己作为内置 demo，`finish` 会允许 `TASK_BOARD.md`、`COMM_LOG.md`、`HANDOFFS.md`、`reviews/`、`rewrite_requests/`、`runtime/` 这些协作运行产物处于脏状态，不会因为实时任务/Review 更新而卡住 merge back。
 
@@ -81,6 +86,8 @@ python3 scripts/export_status.py
 ```
 
 bootstrap 会生成 `coordination.config.json`。这个文件被 `gitignore` 忽略，所以不会把你的本机路径提交到公开仓库。如果目标仓库当前只有 `origin/main` 或 `origin/master`，bootstrap 还会自动补一个本地 tracking branch，确保 branch/worktree 流程可以立即使用。
+
+当前仓库自带的 demo 模板默认会启用 `thread1 -> codex/thread1-mainline` 这条持久分支映射。你也可以在本地配置里修改或删除它。
 
 如果注册过程更新了目标仓库的 `.gitignore`，请先在目标仓库基线分支上把这次修改提交掉，再进行第一次 merge back。
 
@@ -108,10 +115,18 @@ tools/StatusBoard/run.sh --preview-window
 ## 标准工作流
 
 1. 在 `TASK_BOARD.md` 中认领任务，并改成 `IN_PROGRESS`。
-2. 让控制面仓库 hook 自动建 branch，或者手动执行：
+2. 让控制面仓库 hook 自动建 branch，或者手动执行。
+
+普通 scoped 线程示例：
 
 ```bash
 bash thread_branch_flow.sh start --thread thread2 --scope board-polish --task T2-BOARD-001 --note "kickoff note"
+```
+
+持久后端线程示例：
+
+```bash
+bash thread_branch_flow.sh start --thread thread1 --task T1-BACKEND-001 --note "kickoff note"
 ```
 
 3. 只在目标仓库生成出来的 worktree 中改代码。
@@ -129,7 +144,7 @@ bash thread_branch_flow.sh audit
 
 ```bash
 bash thread_branch_flow.sh finish \
-  --branch codex/thread2 \
+  --branch codex/thread2-board-polish \
   --review-ref H-T3-THREAD2-AUTO-20260314123456 \
   --task T2-BOARD-001 \
   --note "merged after thread3 allow" \
@@ -147,6 +162,7 @@ python3 scripts/coord_task_event.py finish --thread thread2 --task T2-BOARD-001 
 `install_hooks.sh` 会在两个仓库里安装协作 hooks：
 
 - 控制面仓库 `post-commit`：扫描 `TASK_BOARD.md`，为 `auto_branch: true` 且已进入 `IN_PROGRESS` 的线程自动创建 worktree
+- 持久分支在 merge back 后会保留并自动同步到更新后的基线分支；scoped 分支在 `finish --cleanup-source` 时会被清理
 - 目标仓库 `pre-commit`：如果当前线程分支还没有对应的 `IN_PROGRESS` 任务和 kickoff 日志，就阻止提交
 - 目标仓库 `post-commit`：异步执行 `codex exec --output-schema`，并把结果写入 `reviews/`、`HANDOFFS.md`、`COMM_LOG.md`
 - 目标仓库 `pre-push`：在 push 前再次异步触发同样的 review 流程，作为兜底
@@ -212,12 +228,14 @@ python3 scripts/self_test.py
 - `auto_rewrite_on_block`：review 被阻塞后，是否自动在当前 worktree 重新调用申请者线程修复
 - `max_auto_rewrite_attempts`：同一线程分支上的自动重写最大尝试次数，用来防止死循环
 - `review_timeout_seconds`：单次自动 review 的超时时间；超时后 hook 会记录 blocker 并退出
+- `persistent_branches`：可选的 `thread_id -> branch_name` 映射，用来指定哪些线程复用一条分支，例如 `thread1 -> codex/thread1-mainline`
 
 bootstrap 额外参数：
 
 - `--install-hooks`：在 bootstrap 阶段直接安装 hooks
 - `--doctor`：在 bootstrap 后立刻跑一次健康检查
 - `--codex-exec-arg`：给 `codex exec` 追加额外参数；可重复传入
+- `--persistent-branch`：用 `THREAD_ID=BRANCH` 的形式把某个线程固定到一条可复用分支；可重复传入
 - `--auto-rewrite-on-block`：开启被阻塞 review 后的自动召回重写
 - `--max-auto-rewrite-attempts`：限制自动重写最大尝试次数
 - `--review-timeout-seconds`：配置自动 review 超时时间

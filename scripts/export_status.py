@@ -125,6 +125,14 @@ def branch_matches_thread(branch: str, thread_id: str) -> bool:
     return branch == f"codex/{thread_id}" or branch.startswith(f"codex/{thread_id}-")
 
 
+def persistent_branch_for_thread(config, thread_id: str) -> str | None:
+    return config.persistent_branches.get(thread_id)
+
+
+def expected_branch_prefix(config, thread_id: str) -> str:
+    return persistent_branch_for_thread(config, thread_id) or f"codex/{thread_id}-"
+
+
 def main() -> None:
     config = load_config()
     task_board = config.coordination_root / "TASK_BOARD.md"
@@ -164,7 +172,8 @@ def main() -> None:
         task = select_task(thread_id, tasks)
         if task:
             counts[task.status] = counts.get(task.status, 0) + 1
-        prefix = f"codex/{thread_id}"
+        persistent_branch = persistent_branch_for_thread(config, thread_id)
+        prefix = expected_branch_prefix(config, thread_id)
         local_matches = [item.split("|")[0] for item in local_branches if branch_matches_thread(item.split("|")[0], thread_id)]
         remote_matches = [item for item in remote_branches if branch_matches_thread(item.split("origin/", 1)[-1], thread_id)]
         threads.append(
@@ -180,6 +189,7 @@ def main() -> None:
                 "last_invocation": logs["last_invocation"].get(thread_id),
                 "branches": {
                     "expected_prefix": prefix,
+                    "persistent_branch": persistent_branch,
                     "local": [{"name": branch, "worktree": worktrees.get(branch)} for branch in local_matches],
                     "remote": remote_matches,
                 },

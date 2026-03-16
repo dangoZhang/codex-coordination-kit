@@ -24,6 +24,7 @@ class CoordinationConfig:
     auto_rewrite_on_block: bool
     max_auto_rewrite_attempts: int
     review_timeout_seconds: int
+    persistent_branches: dict[str, str]
 
 
 def coordination_root() -> Path:
@@ -64,6 +65,7 @@ def load_config(root: Path | None = None) -> CoordinationConfig:
         auto_rewrite_on_block=bool(raw.get("auto_rewrite_on_block", False)),
         max_auto_rewrite_attempts=max(0, int(raw.get("max_auto_rewrite_attempts", 2))),
         review_timeout_seconds=max(30, int(raw.get("review_timeout_seconds", 600))),
+        persistent_branches=dict(raw.get("persistent_branches") or {}),
     )
 
 

@@ -167,6 +167,14 @@ final class StatusBoardStore: ObservableObject {
         )
     }
 
+    func threadItem(for threadID: String) -> Snapshot.ThreadItem? {
+        snapshot?.threads.first(where: { $0.thread == threadID })
+    }
+
+    func persistentBranch(for threadID: String) -> String? {
+        threadItem(for: threadID)?.branches.persistentBranch
+    }
+
     func openCollaborationGuide(for thread: Snapshot.ThreadItem) {
         let view = CollaborationGuideWindow(store: self, thread: thread, entry: registryEntry(for: thread))
         if let controller = guideWindowController {
@@ -193,7 +201,16 @@ final class StatusBoardStore: ObservableObject {
     func buildStarterPrompt(for entry: ThreadRegistryEntry) -> String {
         let rootPath = coordinationRootURL?.path ?? "<coordination-root>"
         let baseBranch = snapshot?.baseBranch ?? "main"
-        let startCommand = "bash thread_branch_flow.sh start --thread \(entry.id) --scope <scope> --task <TASK_ID> --note \"kickoff note\""
+        let persistentBranch = persistentBranch(for: entry.id)
+        let startCommand = persistentBranch == nil
+            ? "bash thread_branch_flow.sh start --thread \(entry.id) --scope <scope> --task <TASK_ID> --note \"kickoff note\""
+            : "bash thread_branch_flow.sh start --thread \(entry.id) --task <TASK_ID> --note \"kickoff note\""
+        let branchInstruction = persistentBranch == nil
+            ? "3. 从配置的基线分支 `\(baseBranch)` 创建新的 scoped branch/worktree："
+            : "3. 复用配置好的持久分支 `\(persistentBranch!)`，并在每次工作前把它同步到 `\(baseBranch)`："
+        let workingLine = persistentBranch == nil
+            ? "- 始终在分配给你的 scoped branch/worktree 中工作。"
+            : "- 始终在分配给你的持久分支/worktree 中工作。"
         return """
         你现在是 `\(entry.name)`（`\(entry.id)`），负责 `\(entry.role)`。
 
@@ -207,13 +224,13 @@ final class StatusBoardStore: ObservableObject {
            - HANDOFFS.md
            - THREADS.json
         2. 只认领属于你职责范围内的工作。
-        3. 启动或复用你的长期线程分支/worktree，并在开始编码前和 `\(baseBranch)` 对齐：
+        \(branchInstruction)
            `\(startCommand)`
         4. 不要提交代码，直到 TASK_BOARD.md 已经把任务标成 IN_PROGRESS，并且 COMM_LOG.md 里有带任务 ID 的 kickoff。
 
         工作过程中：
         - 保持 TASK_BOARD.md 和 COMM_LOG.md 状态最新。
-        - 始终在分配给你的长期线程 branch/worktree 中工作。
+        \(workingLine)
         - 分支准备好后，写清晰的 handoff。
 
         如果 thread3 阻塞了分支：

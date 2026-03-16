@@ -9,5 +9,8 @@
   "auto_finish_on_approve": false,
   "auto_rewrite_on_block": false,
   "max_auto_rewrite_attempts": 2,
-  "review_timeout_seconds": 600
+  "review_timeout_seconds": 600,
+  "persistent_branches": {
+    "thread1": "codex/thread1-mainline"
+  }
 }

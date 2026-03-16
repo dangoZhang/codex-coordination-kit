@@ -57,7 +57,12 @@ The tracked template now ships with a compact 5-thread demo so the kit can coord
 
 You can keep this as a working demo or replace it by editing `THREADS.json`, `TASK_BOARD.md`, `OWNERSHIP.md`, and `THREAD_BRIEFS.md`.
 
-Producer threads use a long-lived per-thread branch by default. Running `thread_branch_flow.sh start` now resumes `codex/threadX` if it already exists, reuses its worktree, and merges the latest base branch into it before work starts.
+The default demo now mixes two branch modes:
+
+- `thread1` uses the persistent backend branch `codex/thread1-mainline`
+- other producer threads use scoped branches like `codex/thread2-board-polish`
+
+Persistent branches are configured through `persistent_branches` in `coordination.config.json`. Running `thread_branch_flow.sh start` on a persistent thread reuses that branch and syncs it with the latest base branch before work starts. Scoped threads still open a fresh `codex/threadX-<scope>` branch per task.
 
 If you register this repo against itself for the built-in demo, `finish` tolerates dirty coordination runtime files such as `TASK_BOARD.md`, `COMM_LOG.md`, `HANDOFFS.md`, `reviews/`, `rewrite_requests/`, and `runtime/`, so live review/task updates do not block merge-back.
 
@@ -81,6 +86,8 @@ python3 scripts/export_status.py
 ```
 
 Bootstrap writes `coordination.config.json`, which is gitignored so local paths stay out of the public repo. If the target repo only has `origin/main` or `origin/master`, bootstrap will create the matching local tracking branch automatically so branch/worktree flow works immediately.
+
+The tracked demo template enables `thread1 -> codex/thread1-mainline` as a persistent branch by default. You can edit or remove that mapping in local config.
 
 If registration updates the target repo `.gitignore`, commit that change on the target repo base branch before your first merge-back.
 
@@ -108,10 +115,18 @@ The board shows the duration of the last completed thread run, measured from the
 ## Standard Workflow
 
 1. Claim a task in `TASK_BOARD.md` and move it to `IN_PROGRESS`.
-2. Let the coordination repo hook auto-create a compliant branch, or create one manually:
+2. Let the coordination repo hook auto-create a compliant branch, or create one manually.
+
+Scoped producer thread example:
 
 ```bash
 bash thread_branch_flow.sh start --thread thread2 --scope board-polish --task T2-BOARD-001 --note "kickoff note"
+```
+
+Persistent backend thread example:
+
+```bash
+bash thread_branch_flow.sh start --thread thread1 --task T1-BACKEND-001 --note "kickoff note"
 ```
 
 3. Work only inside the generated target-repo worktree.
@@ -129,7 +144,7 @@ Merge after an approved handoff:
 
 ```bash
 bash thread_branch_flow.sh finish \
-  --branch codex/thread2 \
+  --branch codex/thread2-board-polish \
   --review-ref H-T3-THREAD2-AUTO-20260314123456 \
   --task T2-BOARD-001 \
   --note "merged after thread3 allow" \
@@ -147,6 +162,7 @@ python3 scripts/coord_task_event.py finish --thread thread2 --task T2-BOARD-001 
 `install_hooks.sh` installs coordination hooks in both repos:
 
 - coordination repo `post-commit`: scans `TASK_BOARD.md` for `IN_PROGRESS` rows and auto-creates thread worktrees for threads with `auto_branch: true`
+- persistent branches are preserved after merge-back and synced to the updated base branch; scoped branches are deleted when `finish --cleanup-source` runs
 - target repo `pre-commit`: blocks producer commits until the branch has a matching `IN_PROGRESS` task and kickoff log
 - target repo `post-commit`: launches `codex exec --output-schema` asynchronously against the current thread branch and writes the gate result into `reviews/`, `HANDOFFS.md`, and `COMM_LOG.md`
 - target repo `pre-push`: re-triggers the same asynchronous review flow as a safety net before push
@@ -212,12 +228,14 @@ Fields:
 - `auto_rewrite_on_block`: whether a blocked review should automatically re-invoke the applicant thread on the current worktree
 - `max_auto_rewrite_attempts`: loop guard for auto rewrite retries on the same branch
 - `review_timeout_seconds`: timeout for a single automated review invocation before the hook logs a blocker and exits
+- `persistent_branches`: optional map of `thread_id -> branch_name` for threads that should reuse one branch, for example `thread1 -> codex/thread1-mainline`
 
 Bootstrap flags:
 
 - `--install-hooks`: install hooks as part of bootstrap
 - `--doctor`: run a post-bootstrap health check
 - `--codex-exec-arg`: append an extra `codex exec` argument; repeat as needed
+- `--persistent-branch`: pin a thread to a reusable branch using `THREAD_ID=BRANCH`; repeat as needed
 - `--auto-rewrite-on-block`: enable automatic rewrite recall on blocked review
 - `--max-auto-rewrite-attempts`: cap automatic rewrite retries
 - `--review-timeout-seconds`: configure automated review timeout

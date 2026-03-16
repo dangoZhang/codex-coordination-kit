@@ -153,13 +153,30 @@ def exercise_thread_flow(control_root: Path, target_repo: Path, kickoff_note: st
             str(control_root / "thread_branch_flow.sh"),
             "start",
             "--thread",
-            "thread1",
+            "thread2",
             "--scope",
-            "guard-check",
+            "board-pass",
         ],
         cwd=control_root,
     )
-    branch = "codex/thread1"
+    scoped_branch = "codex/thread2-board-pass"
+    scoped_worktree = target_repo / ".codex-worktrees" / scoped_branch.replace("/", "__")
+    if run(["git", "show-ref", "--verify", "--quiet", f"refs/heads/{scoped_branch}"], cwd=target_repo, check=False).returncode != 0:
+        raise SystemExit("Scoped thread2 branch should be created during self-test")
+    if not scoped_worktree.exists():
+        raise SystemExit("Scoped thread2 worktree should exist during self-test")
+
+    run(
+        [
+            "bash",
+            str(control_root / "thread_branch_flow.sh"),
+            "start",
+            "--thread",
+            "thread1",
+        ],
+        cwd=control_root,
+    )
+    branch = "codex/thread1-mainline"
     worktree_root = target_repo / ".codex-worktrees" / branch.replace("/", "__")
     (worktree_root / "backend.txt").write_text("first change\n", encoding="utf-8")
     run(["git", "add", "backend.txt"], cwd=worktree_root)
@@ -213,6 +230,10 @@ def exercise_thread_flow(control_root: Path, target_repo: Path, kickoff_note: st
         ],
         cwd=control_root,
     )
+    if run(["git", "show-ref", "--verify", "--quiet", f"refs/heads/{branch}"], cwd=target_repo, check=False).returncode != 0:
+        raise SystemExit("Persistent thread1 branch should be preserved after finish")
+    if not worktree_root.exists():
+        raise SystemExit("Persistent thread1 worktree should remain after finish")
 
     exported = run(["python3", str(control_root / "scripts" / "export_status.py")], cwd=control_root)
     payload = json.loads(exported.stdout)

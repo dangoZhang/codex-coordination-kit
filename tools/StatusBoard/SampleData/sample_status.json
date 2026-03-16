@@ -82,15 +82,16 @@
         "line_no": 16
       },
       "branches": {
-        "expected_prefix": "codex/thread1",
+        "expected_prefix": "codex/thread1-mainline",
+        "persistent_branch": "codex/thread1-mainline",
         "local": [
           {
-            "name": "codex/thread1",
-            "worktree": "/sample/target-repo/.codex-worktrees/codex__thread1"
+            "name": "codex/thread1-mainline",
+            "worktree": "/sample/target-repo/.codex-worktrees/codex__thread1-mainline"
           }
         ],
         "remote": [
-          "origin/codex/thread1"
+          "origin/codex/thread1-mainline"
         ]
       }
     },
@@ -125,11 +126,11 @@
         "line_no": 22
       },
       "branches": {
-        "expected_prefix": "codex/thread2",
+        "expected_prefix": "codex/thread2-",
         "local": [
           {
-            "name": "codex/thread2",
-            "worktree": "/sample/target-repo/.codex-worktrees/codex__thread2"
+            "name": "codex/thread2-board-polish",
+            "worktree": "/sample/target-repo/.codex-worktrees/codex__thread2-board-polish"
           }
         ],
         "remote": []
@@ -166,13 +167,8 @@
         "line_no": 28
       },
       "branches": {
-        "expected_prefix": "codex/thread3",
-        "local": [
-          {
-            "name": "codex/thread3",
-            "worktree": "/sample/target-repo/.codex-worktrees/codex__thread3"
-          }
-        ],
+        "expected_prefix": "codex/thread3-",
+        "local": [],
         "remote": []
       }
     },
@@ -207,11 +203,11 @@
         "line_no": 32
       },
       "branches": {
-        "expected_prefix": "codex/thread4",
+        "expected_prefix": "codex/thread4-",
         "local": [
           {
-            "name": "codex/thread4",
-            "worktree": "/sample/target-repo/.codex-worktrees/codex__thread4"
+            "name": "codex/thread4-doc-polish",
+            "worktree": "/sample/target-repo/.codex-worktrees/codex__thread4-doc-polish"
           }
         ],
         "remote": []

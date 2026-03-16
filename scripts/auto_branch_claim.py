@@ -16,6 +16,20 @@ def branch_for_thread(thread_id: str) -> str:
     return f"codex/{thread_id}"
 
 
+def worktree_branches(target_repo) -> set[str]:
+    rows = subprocess.run(
+        ["git", "-C", str(target_repo), "worktree", "list", "--porcelain"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.splitlines()
+    branches: set[str] = set()
+    for line in rows:
+        if line.startswith("branch "):
+            branches.add(line.split(" ", 1)[1].replace("refs/heads/", ""))
+    return branches
+
+
 def parse_task_board(task_board_path: str) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
     for line in open(task_board_path, "r", encoding="utf-8").read().splitlines():
@@ -55,6 +69,7 @@ def main() -> None:
         ).stdout.splitlines()
         if line
     )
+    active_worktree_branches = worktree_branches(config.target_repo)
     created: list[tuple[str, str, str]] = []
 
     for row in parse_task_board(str(task_board)):
@@ -64,19 +79,27 @@ def main() -> None:
         if row["status"] != "IN_PROGRESS":
             continue
 
-        branch_name = branch_for_thread(row["thread"])
-        legacy_prefix = f"{branch_name}-"
-        if branch_name in branches or any(branch.startswith(legacy_prefix) for branch in branches):
+        persistent_branch = config.persistent_branches.get(row["thread"])
+        branch_name = persistent_branch or f"{branch_for_thread(row['thread'])}-"
+        if persistent_branch:
+            if branch_name in active_worktree_branches:
+                continue
+        elif any(branch.startswith(branch_name) for branch in active_worktree_branches):
             continue
 
         scope = sanitize(f"{row['id']}-{row['task']}")[:48]
+        command = ["bash", str(flow_script), "start", "--thread", row["thread"]]
+        if not persistent_branch:
+            command.extend(["--scope", scope])
         subprocess.run(
-            ["bash", str(flow_script), "start", "--thread", row["thread"], "--scope", scope],
+            command,
             cwd=str(config.coordination_root),
             check=True,
         )
-        branches.add(branch_name)
-        created.append((row["thread"], branch_name, row["id"]))
+        actual_branch = persistent_branch or f"{branch_name}{scope}"
+        branches.add(actual_branch)
+        active_worktree_branches.add(actual_branch)
+        created.append((row["thread"], actual_branch, row["id"]))
 
     if created:
         with comm_log.open("a", encoding="utf-8") as handle:

@@ -5,7 +5,7 @@ import argparse
 import json
 from pathlib import Path
 
-from common import command_exists, coordination_root, git, git_ref_exists, repo_relative_path, run
+from common import command_exists, coordination_root, git, git_ref_exists, load_threads, repo_relative_path, run
 
 
 def detect_remote_base_branch(target_repo: Path) -> str | None:
@@ -91,6 +91,31 @@ def ensure_gitignore_entries(target_repo: Path, entries: list[str]) -> list[str]
     return added
 
 
+def default_persistent_branches(root: Path) -> dict[str, str]:
+    try:
+        threads = load_threads(root)
+    except Exception:
+        return {}
+    if any(row.get("id") == "thread1" for row in threads):
+        return {"thread1": "codex/thread1-mainline"}
+    return {}
+
+
+def parse_persistent_branches(values: list[str], root: Path) -> dict[str, str]:
+    if not values:
+        return default_persistent_branches(root)
+
+    mapping: dict[str, str] = {}
+    for value in values:
+        thread_id, separator, branch = value.partition("=")
+        thread_id = thread_id.strip()
+        branch = branch.strip()
+        if separator != "=" or not thread_id or not branch:
+            raise SystemExit(f"Invalid --persistent-branch value: {value!r}. Use THREAD_ID=codex/threadX-mainline.")
+        mapping[thread_id] = branch
+    return mapping
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Bootstrap Codex Coordination Kit against an existing git project."
@@ -124,6 +149,12 @@ def parse_args() -> argparse.Namespace:
         help="Timeout for a single automated review invocation.",
     )
     parser.add_argument(
+        "--persistent-branch",
+        action="append",
+        default=[],
+        help="Keep a thread on a reusable branch with THREAD_ID=BRANCH. Repeat as needed.",
+    )
+    parser.add_argument(
         "--install-hooks",
         action="store_true",
         help="Install coordination hooks immediately after writing local config.",
@@ -149,6 +180,7 @@ def main() -> None:
 
     base_branch = args.base_branch or detect_base_branch(target_repo)
     created_local_base = ensure_local_base_branch(target_repo, base_branch)
+    persistent_branches = parse_persistent_branches(list(args.persistent_branch), root)
 
     worktree_root = (
         Path(args.worktree_root).expanduser().resolve()
@@ -165,6 +197,7 @@ def main() -> None:
         "auto_rewrite_on_block": args.auto_rewrite_on_block,
         "max_auto_rewrite_attempts": max(0, args.max_auto_rewrite_attempts),
         "review_timeout_seconds": max(30, args.review_timeout_seconds),
+        "persistent_branches": persistent_branches,
     }
     config_path = root / "coordination.config.json"
     config_path.write_text(json.dumps(config, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -194,6 +227,10 @@ def main() -> None:
     if created_local_base:
         print(f"Created local tracking branch: {base_branch}")
     print(f"Worktree root: {worktree_root}")
+    if persistent_branches:
+        print("Persistent branches:")
+        for thread_id, branch in sorted(persistent_branches.items()):
+            print(f"  - {thread_id}: {branch}")
     if not command_exists(args.codex_bin):
         print(f"Warning: codex executable not found on PATH: {args.codex_bin}")
     if added:

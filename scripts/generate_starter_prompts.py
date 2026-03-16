@@ -20,6 +20,22 @@ def main() -> None:
     ]
 
     for row in threads:
+        persistent_branch = config.persistent_branches.get(row["id"])
+        if persistent_branch:
+            start_command = (
+                f'bash thread_branch_flow.sh start --thread {row["id"]} --task <TASK_ID> --note "kickoff note"'
+            )
+            branch_instruction = (
+                f"3. Reuse the configured persistent branch `{persistent_branch}` and sync it with "
+                f"`{base_branch}` before coding:"
+            )
+        else:
+            start_command = (
+                f'bash thread_branch_flow.sh start --thread {row["id"]} --scope <scope> --task <TASK_ID> --note "kickoff note"'
+            )
+            branch_instruction = (
+                f"3. Start a fresh scoped branch/worktree from `{base_branch}` with:"
+            )
         lines.extend(
             [
                 f"## {row['name']} / `{row['id']}`",
@@ -30,8 +46,8 @@ def main() -> None:
                 "Before coding:",
                 "1. Read README.md, OWNERSHIP.md, THREAD_BRIEFS.md, TASK_BOARD.md, COMM_LOG.md, HANDOFFS.md, and THREADS.json.",
                 "2. Only claim work that stays inside your ownership lane.",
-                f"3. Start or resume your long-lived thread branch/worktree, and sync it with `{base_branch}` before coding:",
-                f'   bash thread_branch_flow.sh start --thread {row["id"]} --scope <scope> --task <TASK_ID> --note "kickoff note"',
+                branch_instruction,
+                f"   {start_command}",
                 "4. Do not commit until TASK_BOARD.md is IN_PROGRESS for your task and COMM_LOG.md has a kickoff line containing the task ID.",
                 "",
                 "While working:",

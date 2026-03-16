@@ -19,6 +19,14 @@ def canonical_branch(thread_id: str) -> str:
     return f"codex/{thread_id}"
 
 
+def persistent_branch_for_thread(config, thread_id: str) -> str | None:
+    return config.persistent_branches.get(thread_id)
+
+
+def expected_branch_prefix(config, thread_id: str) -> str:
+    return persistent_branch_for_thread(config, thread_id) or f"codex/{thread_id}-"
+
+
 def branch_matches_thread(branch: str, thread_id: str | None = None) -> bool:
     match = re.match(r"^codex/(thread[0-9]+)(?:-[a-z0-9][a-z0-9-]*)?$", branch)
     if not match:
@@ -48,6 +56,11 @@ def thread_worktrees(target_repo: Path) -> dict[str, str]:
     return worktrees
 
 
+def worktree_for_branch(target_repo: Path, branch: str) -> Path | None:
+    worktree = thread_worktrees(target_repo).get(branch)
+    return Path(worktree).resolve() if worktree else None
+
+
 def parse_dirty_paths(repo: Path) -> list[str]:
     rows = run(["git", "-C", str(repo), "status", "--porcelain"], check=False).stdout.splitlines()
     paths: list[str] = []
@@ -73,25 +86,6 @@ def is_allowed_runtime_dirty(config, repo: Path) -> bool:
     if not dirty_paths:
         return False
     return all(path in allowed_files or path.startswith(allowed_prefixes) for path in dirty_paths)
-
-
-def select_thread_branch(target_repo: Path, thread_id: str) -> str | None:
-    branches = [
-        line
-        for line in git(target_repo, "for-each-ref", "refs/heads", "--format=%(refname:short)").splitlines()
-        if line and branch_matches_thread(line, thread_id)
-    ]
-    canonical = canonical_branch(thread_id)
-    if canonical in branches:
-        return canonical
-    if len(branches) == 1:
-        return branches[0]
-    if len(branches) > 1:
-        raise SystemExit(
-            f"Multiple existing branches found for {thread_id}: {', '.join(branches)}. "
-            f"Consolidate them before starting more work."
-        )
-    return None
 
 
 def sync_thread_branch(config, branch: str, worktree: Path) -> str:
@@ -143,14 +137,14 @@ def verify_review_ref(coord_root: Path, review_ref: str) -> None:
         if line.startswith("## Handoff: "):
             in_block = f"`{review_ref}`" in line
             continue
-        if in_block and "ALLOW_MERGE_TO_BASE" in line:
+        if in_block and ("ALLOW_MERGE_TO_BASE" in line or "ALLOW_MERGE_TO_MASTER" in line):
             return
 
     for line in comm_log.splitlines():
-        if review_ref in line and "ALLOW_MERGE_TO_BASE" in line:
+        if review_ref in line and ("ALLOW_MERGE_TO_BASE" in line or "ALLOW_MERGE_TO_MASTER" in line):
             return
 
-    raise SystemExit(f"Review ref exists but has no ALLOW_MERGE_TO_BASE marker: {review_ref}")
+    raise SystemExit(f"Review ref exists but has no ALLOW_MERGE_TO_BASE/ALLOW_MERGE_TO_MASTER marker: {review_ref}")
 
 
 def maybe_record_task_event(config, action: str, thread: str, task: str | None, note: str | None) -> None:
@@ -170,7 +164,7 @@ def maybe_record_task_event(config, action: str, thread: str, task: str | None, 
     subprocess.run(command, cwd=str(config.coordination_root), check=True)
 
 
-def start_branch(thread: str | None, thread_name: str | None, scope: str, task: str | None, note: str | None) -> None:
+def start_branch(thread: str | None, thread_name: str | None, scope: str | None, task: str | None, note: str | None) -> None:
     config = load_config()
     threads = load_threads(config.coordination_root)
     if not thread and thread_name:
@@ -180,23 +174,26 @@ def start_branch(thread: str | None, thread_name: str | None, scope: str, task: 
     if not thread_exists(thread, threads):
         raise SystemExit(f"Unknown thread id: {thread}")
 
-    scope = sanitize_scope(scope)
-    if not scope:
-        raise SystemExit("Scope is empty after sanitization")
-
-    branch = select_thread_branch(config.target_repo, thread) or canonical_branch(thread)
+    persistent_branch = persistent_branch_for_thread(config, thread)
+    session_scope = sanitize_scope(scope) if scope else ""
+    if persistent_branch:
+        branch = persistent_branch
+    else:
+        if not session_scope:
+            raise SystemExit("--scope is required for non-persistent threads")
+        branch = f"codex/{thread}-{session_scope}"
     worktree = config.worktree_root / branch.replace("/", "__")
 
     git(config.target_repo, "show-ref", "--verify", "--quiet", f"refs/heads/{config.base_branch}")
     config.worktree_root.mkdir(parents=True, exist_ok=True)
 
-    existing_worktrees = thread_worktrees(config.target_repo)
-    if branch not in existing_worktrees and worktree.exists():
+    existing_worktree = worktree_for_branch(config.target_repo, branch)
+    if not existing_worktree and worktree.exists():
         raise SystemExit(f"Worktree path already exists outside git worktree metadata: {worktree}")
 
     created = False
-    if branch in existing_worktrees:
-        worktree = Path(existing_worktrees[branch]).resolve()
+    if existing_worktree:
+        worktree = existing_worktree
     else:
         branch_exists = subprocess.run(
             ["git", "-C", str(config.target_repo), "show-ref", "--verify", "--quiet", f"refs/heads/{branch}"],
@@ -217,9 +214,14 @@ def start_branch(thread: str | None, thread_name: str | None, scope: str, task: 
     print("Ready:")
     print(f"  branch: {branch}")
     print(f"  worktree: {worktree}")
-    print(f"  session_scope: {scope}")
     print(f"  synced_from: {upstream}")
     print(f"  created: {created}")
+    if session_scope:
+        print(f"  session_scope: {session_scope}")
+    if persistent_branch:
+        print("  branch_mode: persistent")
+    else:
+        print("  branch_mode: scoped")
 
 
 def audit_branches() -> None:
@@ -311,19 +313,17 @@ def finish_branch(branch: str, review_ref: str, cleanup_source: bool, task: str 
 
     subprocess.run(["git", "-C", str(merge_dir), "merge", "--no-ff", "--no-edit", branch], check=True)
 
-    if cleanup_source and not is_thread_branch(branch):
-        worktrees_raw = git(config.target_repo, "worktree", "list", "--porcelain").splitlines()
-        source_path = ""
-        current_path = ""
-        for line in worktrees_raw:
-            if line.startswith("worktree "):
-                current_path = line.split(" ", 1)[1]
-            elif line == f"branch refs/heads/{branch}":
-                source_path = current_path
-                break
+    thread = branch_thread_id(branch)
+    persistent_branch = persistent_branch_for_thread(config, thread) if thread else None
+    is_persistent = bool(persistent_branch and branch == persistent_branch)
+    source_worktree = worktree_for_branch(config.target_repo, branch)
 
-        if source_path and Path(source_path).resolve().is_relative_to(config.worktree_root.resolve()):
-            subprocess.run(["git", "-C", str(config.target_repo), "worktree", "remove", source_path, "--force"], check=False)
+    if is_persistent:
+        if source_worktree:
+            sync_thread_branch(config, branch, source_worktree)
+    elif cleanup_source:
+        if source_worktree and source_worktree.is_relative_to(config.worktree_root.resolve()):
+            subprocess.run(["git", "-C", str(config.target_repo), "worktree", "remove", str(source_worktree), "--force"], check=False)
         subprocess.run(["git", "-C", str(config.target_repo), "branch", "-D", branch], check=False)
 
     print("Merged:")
@@ -331,14 +331,12 @@ def finish_branch(branch: str, review_ref: str, cleanup_source: bool, task: str 
     print(f"  into: {config.base_branch}")
     print(f"  review: {review_ref}")
     print(f"  merge_worktree: {merge_dir}")
-    print(f"  cleanup_source: {cleanup_source and not is_thread_branch(branch)}")
-    if cleanup_source and is_thread_branch(branch):
-        print("  source_branch_preserved: long-lived thread branch")
+    print(f"  cleanup_source: {cleanup_source and not is_persistent}")
+    if is_persistent:
+        print("  source_branch_preserved: configured persistent branch")
     if temp_worktree:
         print("Remove temp merge worktree after verification:")
         print(f'  git -C "{config.target_repo}" worktree remove "{temp_worktree}"')
-
-    thread = branch_thread_id(branch)
     if thread:
         maybe_record_task_event(config, "finish", thread, task, note)
 
@@ -350,7 +348,7 @@ def main() -> None:
     start = sub.add_parser("start")
     start.add_argument("--thread")
     start.add_argument("--thread-name")
-    start.add_argument("--scope", required=True)
+    start.add_argument("--scope")
     start.add_argument("--task")
     start.add_argument("--note")
 

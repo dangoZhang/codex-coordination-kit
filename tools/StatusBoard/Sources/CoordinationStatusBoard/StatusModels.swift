@@ -102,11 +102,13 @@ struct Snapshot: Decodable {
             }
 
             let expectedPrefix: String
+            let persistentBranch: String?
             let local: [Branch]
             let remote: [String]
 
             private enum CodingKeys: String, CodingKey {
                 case expectedPrefix = "expected_prefix"
+                case persistentBranch = "persistent_branch"
                 case local
                 case remote
             }

@@ -10,7 +10,7 @@ You are `00-Product` (`thread0`) and own `Product Manager / Coordination`.
 Before coding:
 1. Read README.md, OWNERSHIP.md, THREAD_BRIEFS.md, TASK_BOARD.md, COMM_LOG.md, HANDOFFS.md, and THREADS.json.
 2. Only claim work that stays inside your ownership lane.
-3. Start or resume your long-lived thread branch/worktree, and sync it with `main` before coding:
+3. Start a fresh scoped branch/worktree from `main` with:
    bash thread_branch_flow.sh start --thread thread0 --scope <scope> --task <TASK_ID> --note "kickoff note"
 4. Do not commit until TASK_BOARD.md is IN_PROGRESS for your task and COMM_LOG.md has a kickoff line containing the task ID.
 
@@ -35,8 +35,8 @@ You are `01-Backend` (`thread1`) and own `Backend / Automation`.
 Before coding:
 1. Read README.md, OWNERSHIP.md, THREAD_BRIEFS.md, TASK_BOARD.md, COMM_LOG.md, HANDOFFS.md, and THREADS.json.
 2. Only claim work that stays inside your ownership lane.
-3. Start or resume your long-lived thread branch/worktree, and sync it with `main` before coding:
-   bash thread_branch_flow.sh start --thread thread1 --scope <scope> --task <TASK_ID> --note "kickoff note"
+3. Reuse the configured persistent branch `codex/thread1-mainline` and sync it with `main` before coding:
+   bash thread_branch_flow.sh start --thread thread1 --task <TASK_ID> --note "kickoff note"
 4. Do not commit until TASK_BOARD.md is IN_PROGRESS for your task and COMM_LOG.md has a kickoff line containing the task ID.
 
 While working:
@@ -60,7 +60,7 @@ You are `02-Board` (`thread2`) and own `StatusBoard Frontend`.
 Before coding:
 1. Read README.md, OWNERSHIP.md, THREAD_BRIEFS.md, TASK_BOARD.md, COMM_LOG.md, HANDOFFS.md, and THREADS.json.
 2. Only claim work that stays inside your ownership lane.
-3. Start or resume your long-lived thread branch/worktree, and sync it with `main` before coding:
+3. Start a fresh scoped branch/worktree from `main` with:
    bash thread_branch_flow.sh start --thread thread2 --scope <scope> --task <TASK_ID> --note "kickoff note"
 4. Do not commit until TASK_BOARD.md is IN_PROGRESS for your task and COMM_LOG.md has a kickoff line containing the task ID.
 
@@ -85,7 +85,7 @@ You are `03-Review` (`thread3`) and own `Review Gate`.
 Before coding:
 1. Read README.md, OWNERSHIP.md, THREAD_BRIEFS.md, TASK_BOARD.md, COMM_LOG.md, HANDOFFS.md, and THREADS.json.
 2. Only claim work that stays inside your ownership lane.
-3. Start or resume your long-lived thread branch/worktree, and sync it with `main` before coding:
+3. Start a fresh scoped branch/worktree from `main` with:
    bash thread_branch_flow.sh start --thread thread3 --scope <scope> --task <TASK_ID> --note "kickoff note"
 4. Do not commit until TASK_BOARD.md is IN_PROGRESS for your task and COMM_LOG.md has a kickoff line containing the task ID.
 
@@ -110,7 +110,7 @@ You are `04-Readme` (`thread4`) and own `README / Docs`.
 Before coding:
 1. Read README.md, OWNERSHIP.md, THREAD_BRIEFS.md, TASK_BOARD.md, COMM_LOG.md, HANDOFFS.md, and THREADS.json.
 2. Only claim work that stays inside your ownership lane.
-3. Start or resume your long-lived thread branch/worktree, and sync it with `main` before coding:
+3. Start a fresh scoped branch/worktree from `main` with:
    bash thread_branch_flow.sh start --thread thread4 --scope <scope> --task <TASK_ID> --note "kickoff note"
 4. Do not commit until TASK_BOARD.md is IN_PROGRESS for your task and COMM_LOG.md has a kickoff line containing the task ID.
 

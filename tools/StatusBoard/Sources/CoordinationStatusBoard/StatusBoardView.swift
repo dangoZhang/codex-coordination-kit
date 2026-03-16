@@ -95,6 +95,7 @@ private struct ThreadCard: View {
 
     var body: some View {
         let entry = store.registryEntry(for: thread)
+        let persistentBranch = thread.branches.persistentBranch
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(thread.displayName)
@@ -108,7 +109,12 @@ private struct ThreadCard: View {
                     .foregroundStyle(statusColor)
             }
 
-            Text("\(thread.thread) · 槽位 \(thread.slot) · \(thread.autoBranch ? "自动建分支" : "手动建分支")")
+            Text(
+                "\(thread.thread) · 槽位 \(thread.slot) · "
+                    + (persistentBranch == nil
+                        ? (thread.autoBranch ? "按任务自动建分支" : "手动建分支")
+                        : "持久分支模式")
+            )
                 .font(.system(size: 10))
                 .foregroundStyle(.secondary)
 
@@ -349,7 +355,11 @@ struct CollaborationGuideWindow: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("最常用命令")
                         .font(.system(size: 14, weight: .semibold))
-                    Text("bash thread_branch_flow.sh start --thread \(entry.id) --scope <scope> --task <TASK_ID> --note \"kickoff note\"")
+                    Text(
+                        thread.branches.persistentBranch == nil
+                            ? "bash thread_branch_flow.sh start --thread \(entry.id) --scope <scope> --task <TASK_ID> --note \"kickoff note\""
+                            : "bash thread_branch_flow.sh start --thread \(entry.id) --task <TASK_ID> --note \"kickoff note\""
+                    )
                         .font(.system(size: 12, design: .monospaced))
                         .textSelection(.enabled)
                         .padding(12)
@@ -359,7 +369,7 @@ struct CollaborationGuideWindow: View {
                 guideSection(
                     title: "如果被 thread3 阻塞",
                     body: """
-                    保持在同一条长期线程分支上。先阅读 reviews/ 里的最新 review JSON，再看 rewrite_requests/ 里的最新重写说明。
+                    保持在同一条\(thread.branches.persistentBranch == nil ? "" : "持久")分支上。先阅读 reviews/ 里的最新 review JSON，再看 rewrite_requests/ 里的最新重写说明。
                     只做最小必要修复，跑有针对性的验证，然后提交一个新 commit 让 thread3 重新审核。
                     """
                 )
@@ -409,9 +419,16 @@ struct CollaborationGuideWindow: View {
     }
 
     private var nextStepText: String {
-        let branchGuidance = entry.autoBranch
-            ? "把任务改成 IN_PROGRESS 后，hook 会自动准备或复用这个线程的长期分支；如果没有自动处理，就手动运行上面的 start 命令。"
-            : "这个线程不会自动建分支。准备开始时，请手动运行上面的 start 命令，让长期线程分支先和基线同步。"
+        let branchGuidance: String
+        if let persistentBranch = thread.branches.persistentBranch {
+            branchGuidance = entry.autoBranch
+                ? "把任务改成 IN_PROGRESS 后，hook 会自动准备或复用持久分支 `\(persistentBranch)`；如果没有自动处理，就手动运行上面的 start 命令。"
+                : "这个线程不会自动建分支。准备开始时，请手动运行上面的 start 命令，先把 `\(persistentBranch)` 和基线同步。"
+        } else {
+            branchGuidance = entry.autoBranch
+                ? "把任务改成 IN_PROGRESS 后，hook 会自动准备新的 scoped 分支；如果没有自动创建，就手动运行上面的 start 命令。"
+                : "这个线程不会自动建分支。准备开始时，请手动运行上面的 start 命令创建 scoped 分支。"
+        }
 
         if thread.task == nil {
             return """
@@ -425,7 +442,7 @@ struct CollaborationGuideWindow: View {
         return """
         1. 先确认这个任务仍然属于 \(entry.role) 的职责范围。
         2. \(branchGuidance)
-        3. 全程在该线程的长期 worktree 中工作，保持 TASK_BOARD.md 状态最新，并在完成时写交接。
+        3. 全程在该线程分配到的 worktree 中工作，保持 TASK_BOARD.md 状态最新，并在完成时写交接。
         4. 如果 review 阻塞了分支，就在同一条分支上修复后重新提交。
         """
     }
