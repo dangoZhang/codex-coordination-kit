@@ -57,6 +57,8 @@ The tracked template now ships with a compact 5-thread demo so the kit can coord
 
 You can keep this as a working demo or replace it by editing `THREADS.json`, `TASK_BOARD.md`, `OWNERSHIP.md`, and `THREAD_BRIEFS.md`.
 
+Producer threads use a long-lived per-thread branch by default. Running `thread_branch_flow.sh start` now resumes `codex/threadX` if it already exists, reuses its worktree, and merges the latest base branch into it before work starts.
+
 ## Quick Start
 
 1. Clone this repo where you want the control plane to live.
@@ -125,11 +127,10 @@ Merge after an approved handoff:
 
 ```bash
 bash thread_branch_flow.sh finish \
-  --branch codex/thread2-board-polish \
+  --branch codex/thread2 \
   --review-ref H-T3-THREAD2-AUTO-20260314123456 \
   --task T2-BOARD-001 \
   --note "merged after thread3 allow" \
-  --cleanup-source
 ```
 
 If you want a single command to claim or finish work without editing markdown manually, use:

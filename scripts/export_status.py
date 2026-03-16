@@ -121,6 +121,10 @@ def select_task(thread_id: str, tasks: list[Task]) -> Optional[Task]:
     return None
 
 
+def branch_matches_thread(branch: str, thread_id: str) -> bool:
+    return branch == f"codex/{thread_id}" or branch.startswith(f"codex/{thread_id}-")
+
+
 def main() -> None:
     config = load_config()
     task_board = config.coordination_root / "TASK_BOARD.md"
@@ -160,9 +164,9 @@ def main() -> None:
         task = select_task(thread_id, tasks)
         if task:
             counts[task.status] = counts.get(task.status, 0) + 1
-        prefix = f"codex/{thread_id}-"
-        local_matches = [item.split("|")[0] for item in local_branches if item.split("|")[0].startswith(prefix)]
-        remote_matches = [item for item in remote_branches if item.split("/")[-1].startswith(f"{thread_id}-")]
+        prefix = f"codex/{thread_id}"
+        local_matches = [item.split("|")[0] for item in local_branches if branch_matches_thread(item.split("|")[0], thread_id)]
+        remote_matches = [item for item in remote_branches if branch_matches_thread(item.split("origin/", 1)[-1], thread_id)]
         threads.append(
             {
                 "thread": thread_id,
@@ -192,10 +196,7 @@ def main() -> None:
             legacy_local.append(branch)
             continue
         tail = branch[len("codex/thread") :]
-        if "-" not in tail:
-            legacy_local.append(branch)
-            continue
-        idx, _scope = tail.split("-", 1)
+        idx = tail.split("-", 1)[0]
         if not idx.isdigit() or f"thread{idx}" not in valid_threads:
             legacy_local.append(branch)
 

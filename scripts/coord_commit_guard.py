@@ -11,7 +11,7 @@ def main() -> None:
     config = load_config()
     active_repo = current_worktree(config.target_repo)
     branch = git(active_repo, "branch", "--show-current")
-    match = re.match(r"^codex/(thread[0-9]+)-[a-z0-9-]+$", branch)
+    match = re.match(r"^codex/(thread[0-9]+)(?:-[a-z0-9][a-z0-9-]*)?$", branch)
     if not match:
         return
 

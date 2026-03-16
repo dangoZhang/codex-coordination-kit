@@ -177,7 +177,7 @@ def main() -> None:
             ],
             cwd=control_root,
         )
-        branch = "codex/thread1-guard-check"
+        branch = "codex/thread1"
         worktree_root = target_repo / ".codex-worktrees" / branch.replace("/", "__")
         (worktree_root / "backend.txt").write_text("first change\n", encoding="utf-8")
         run(["git", "add", "backend.txt"], cwd=worktree_root)

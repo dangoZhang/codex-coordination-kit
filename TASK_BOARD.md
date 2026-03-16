@@ -2,7 +2,7 @@
 
 Status: `TODO` | `IN_PROGRESS` | `BLOCKED` | `DONE`
 
-Policy note: producer threads start from the configured base branch, work on `codex/threadX-<scope>`, and merge back only after `thread3` publishes `ALLOW_MERGE_TO_BASE`.
+Policy note: producer threads keep a long-lived `codex/threadX` branch, sync it with the configured base branch before each work session, and merge back only after `thread3` publishes `ALLOW_MERGE_TO_BASE`.
 
 This tracked template ships with a 5-thread demo backlog for the coordination kit itself. Replace it if your project needs different roles.
 

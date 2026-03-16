@@ -12,6 +12,10 @@ def sanitize(text: str) -> str:
     return re.sub(r"-+", "-", value).strip("-")
 
 
+def branch_for_thread(thread_id: str) -> str:
+    return f"codex/{thread_id}"
+
+
 def parse_task_board(task_board_path: str) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
     for line in open(task_board_path, "r", encoding="utf-8").read().splitlines():
@@ -60,8 +64,9 @@ def main() -> None:
         if row["status"] != "IN_PROGRESS":
             continue
 
-        prefix = f"codex/{row['thread']}-"
-        if any(branch.startswith(prefix) for branch in branches):
+        branch_name = branch_for_thread(row["thread"])
+        legacy_prefix = f"{branch_name}-"
+        if branch_name in branches or any(branch.startswith(legacy_prefix) for branch in branches):
             continue
 
         scope = sanitize(f"{row['id']}-{row['task']}")[:48]
@@ -70,7 +75,6 @@ def main() -> None:
             cwd=str(config.coordination_root),
             check=True,
         )
-        branch_name = f"{prefix}{scope}"
         branches.add(branch_name)
         created.append((row["thread"], branch_name, row["id"]))
 

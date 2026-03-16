@@ -11,7 +11,7 @@ from common import current_worktree, load_config, now_compact, now_date, now_sta
 
 
 def detect_thread(branch: str, threads: dict[str, dict]) -> str | None:
-    match = re.match(r"^codex/(thread[0-9]+)-[a-z0-9-]+$", branch)
+    match = re.match(r"^codex/(thread[0-9]+)(?:-[a-z0-9][a-z0-9-]*)?$", branch)
     if not match:
         return None
     thread_id = match.group(1)

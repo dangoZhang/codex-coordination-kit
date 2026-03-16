@@ -57,6 +57,8 @@ Codex Coordination Kit 用来把一个普通 git 仓库改造成多线程 Codex 
 
 你可以直接把它当 demo 用，也可以编辑 `THREADS.json`、`TASK_BOARD.md`、`OWNERSHIP.md`、`THREAD_BRIEFS.md` 换成自己的模板。
 
+默认生产线程现在使用“每线程一条长期分支”的模式。执行 `thread_branch_flow.sh start` 时，如果 `codex/threadX` 已经存在，就会直接复用它的 worktree，并在开始编码前把最新基线分支合并进去。
+
 ## 快速开始
 
 1. 把这个仓库 clone 到你希望放控制面的目录。
@@ -125,11 +127,10 @@ bash thread_branch_flow.sh audit
 
 ```bash
 bash thread_branch_flow.sh finish \
-  --branch codex/thread2-board-polish \
+  --branch codex/thread2 \
   --review-ref H-T3-THREAD2-AUTO-20260314123456 \
   --task T2-BOARD-001 \
   --note "merged after thread3 allow" \
-  --cleanup-source
 ```
 
 如果你不想手工分别改任务板和通信日志，也可以直接用：

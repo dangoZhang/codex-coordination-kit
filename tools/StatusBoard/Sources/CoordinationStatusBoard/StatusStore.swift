@@ -207,13 +207,13 @@ final class StatusBoardStore: ObservableObject {
            - HANDOFFS.md
            - THREADS.json
         2. 只认领属于你职责范围内的工作。
-        3. 从配置的基线分支 `\(baseBranch)` 创建新的 branch/worktree：
+        3. 启动或复用你的长期线程分支/worktree，并在开始编码前和 `\(baseBranch)` 对齐：
            `\(startCommand)`
         4. 不要提交代码，直到 TASK_BOARD.md 已经把任务标成 IN_PROGRESS，并且 COMM_LOG.md 里有带任务 ID 的 kickoff。
 
         工作过程中：
         - 保持 TASK_BOARD.md 和 COMM_LOG.md 状态最新。
-        - 始终在分配给你的 branch/worktree 中工作。
+        - 始终在分配给你的长期线程 branch/worktree 中工作。
         - 分支准备好后，写清晰的 handoff。
 
         如果 thread3 阻塞了分支：

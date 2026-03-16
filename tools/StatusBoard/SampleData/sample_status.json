@@ -82,15 +82,15 @@
         "line_no": 16
       },
       "branches": {
-        "expected_prefix": "codex/thread1-",
+        "expected_prefix": "codex/thread1",
         "local": [
           {
-            "name": "codex/thread1-hook-hardening",
-            "worktree": "/sample/target-repo/.codex-worktrees/codex__thread1-hook-hardening"
+            "name": "codex/thread1",
+            "worktree": "/sample/target-repo/.codex-worktrees/codex__thread1"
           }
         ],
         "remote": [
-          "origin/codex/thread1-hook-hardening"
+          "origin/codex/thread1"
         ]
       }
     },
@@ -125,11 +125,11 @@
         "line_no": 22
       },
       "branches": {
-        "expected_prefix": "codex/thread2-",
+        "expected_prefix": "codex/thread2",
         "local": [
           {
-            "name": "codex/thread2-menubar-clarity",
-            "worktree": "/sample/target-repo/.codex-worktrees/codex__thread2-menubar-clarity"
+            "name": "codex/thread2",
+            "worktree": "/sample/target-repo/.codex-worktrees/codex__thread2"
           }
         ],
         "remote": []
@@ -166,11 +166,11 @@
         "line_no": 28
       },
       "branches": {
-        "expected_prefix": "codex/thread3-",
+        "expected_prefix": "codex/thread3",
         "local": [
           {
-            "name": "codex/thread3-review-queue",
-            "worktree": "/sample/target-repo/.codex-worktrees/codex__thread3-review-queue"
+            "name": "codex/thread3",
+            "worktree": "/sample/target-repo/.codex-worktrees/codex__thread3"
           }
         ],
         "remote": []
@@ -207,11 +207,11 @@
         "line_no": 32
       },
       "branches": {
-        "expected_prefix": "codex/thread4-",
+        "expected_prefix": "codex/thread4",
         "local": [
           {
-            "name": "codex/thread4-demo-docs",
-            "worktree": "/sample/target-repo/.codex-worktrees/codex__thread4-demo-docs"
+            "name": "codex/thread4",
+            "worktree": "/sample/target-repo/.codex-worktrees/codex__thread4"
           }
         ],
         "remote": []

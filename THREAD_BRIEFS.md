@@ -6,7 +6,7 @@ Every thread should:
 
 1. Read `README.md`, `OWNERSHIP.md`, `THREAD_BRIEFS.md`, `TASK_BOARD.md`, `COMM_LOG.md`, `HANDOFFS.md`, and `THREADS.json`.
 2. Claim only work that matches its ownership.
-3. Start a fresh branch/worktree from the configured base branch.
+3. Start or resume the thread's long-lived branch/worktree and sync it with the configured base branch.
 4. Write a kickoff line in `COMM_LOG.md`.
 5. Finish with a handoff for review, testing, or merge action.
 

@@ -359,7 +359,7 @@ struct CollaborationGuideWindow: View {
                 guideSection(
                     title: "如果被 thread3 阻塞",
                     body: """
-                    保持在同一条分支上。先阅读 reviews/ 里的最新 review JSON，再看 rewrite_requests/ 里的最新重写说明。
+                    保持在同一条长期线程分支上。先阅读 reviews/ 里的最新 review JSON，再看 rewrite_requests/ 里的最新重写说明。
                     只做最小必要修复，跑有针对性的验证，然后提交一个新 commit 让 thread3 重新审核。
                     """
                 )
@@ -410,8 +410,8 @@ struct CollaborationGuideWindow: View {
 
     private var nextStepText: String {
         let branchGuidance = entry.autoBranch
-            ? "把任务改成 IN_PROGRESS 后，hook 会自动准备分支；如果没有自动创建，就手动运行上面的 start 命令。"
-            : "这个线程不会自动建分支。准备开始时，请手动运行上面的 start 命令。"
+            ? "把任务改成 IN_PROGRESS 后，hook 会自动准备或复用这个线程的长期分支；如果没有自动处理，就手动运行上面的 start 命令。"
+            : "这个线程不会自动建分支。准备开始时，请手动运行上面的 start 命令，让长期线程分支先和基线同步。"
 
         if thread.task == nil {
             return """
@@ -425,7 +425,7 @@ struct CollaborationGuideWindow: View {
         return """
         1. 先确认这个任务仍然属于 \(entry.role) 的职责范围。
         2. \(branchGuidance)
-        3. 全程在该线程的 worktree 中工作，保持 TASK_BOARD.md 状态最新，并在完成时写交接。
+        3. 全程在该线程的长期 worktree 中工作，保持 TASK_BOARD.md 状态最新，并在完成时写交接。
         4. 如果 review 阻塞了分支，就在同一条分支上修复后重新提交。
         """
     }

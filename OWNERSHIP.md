@@ -10,7 +10,7 @@
 - Owns: Python scripts, hook orchestration, review/runtime backend, and integration wiring
 - Constraints:
   - start from the configured base branch
-  - work on `codex/thread1-<scope>`
+  - keep work on the long-lived `codex/thread1` branch
   - do not develop directly on the base branch
 
 ## thread2 / 02-Board
@@ -18,7 +18,7 @@
 - Owns: the macOS StatusBoard frontend, sample snapshots, and board interaction quality
 - Constraints:
   - start from the configured base branch
-  - work on `codex/thread2-<scope>`
+  - keep work on the long-lived `codex/thread2` branch
 
 ## thread3 / 03-Review
 
@@ -31,4 +31,4 @@
 
 - Owns: README, onboarding, demo docs, release notes, and operator instructions
 - Constraints:
-  - tracked doc changes require `codex/thread4-<scope>`
+  - tracked doc changes stay on the long-lived `codex/thread4` branch
