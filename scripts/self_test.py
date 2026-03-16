@@ -126,18 +126,111 @@ def wait_for_file(path: Path, timeout_seconds: float = 10.0) -> None:
     raise SystemExit(f"Timed out waiting for file: {path}")
 
 
+def register_project(control_root: Path, target_repo: Path, fake_codex: Path) -> None:
+    run(
+        [
+            "bash",
+            str(control_root / "register_project.sh"),
+            "--target-repo",
+            str(target_repo),
+            "--codex-bin",
+            str(fake_codex),
+        ],
+        cwd=control_root,
+    )
+    if (target_repo / ".gitignore").exists():
+        status = run(["git", "status", "--short", "--", ".gitignore"], cwd=target_repo)
+        if status.stdout.strip():
+            run(["git", "add", ".gitignore"], cwd=target_repo)
+            run(["git", "commit", "-m", "register codex coordination"], cwd=target_repo)
+
+
+def exercise_thread_flow(control_root: Path, target_repo: Path, kickoff_note: str, review_ref: str, finish_note: str) -> None:
+    run(["bash", str(control_root / "doctor.sh"), "--require-hooks"], cwd=control_root)
+    run(
+        [
+            "bash",
+            str(control_root / "thread_branch_flow.sh"),
+            "start",
+            "--thread",
+            "thread1",
+            "--scope",
+            "guard-check",
+        ],
+        cwd=control_root,
+    )
+    branch = "codex/thread1"
+    worktree_root = target_repo / ".codex-worktrees" / branch.replace("/", "__")
+    (worktree_root / "backend.txt").write_text("first change\n", encoding="utf-8")
+    run(["git", "add", "backend.txt"], cwd=worktree_root)
+    blocked_commit = run(["git", "commit", "-m", "should be blocked"], cwd=worktree_root, check=False)
+    if blocked_commit.returncode == 0:
+        raise SystemExit("pre-commit guard did not block commit without task claim / kickoff")
+
+    run(
+        [
+            "python3",
+            str(control_root / "scripts" / "coord_task_event.py"),
+            "start",
+            "--thread",
+            "thread1",
+            "--task",
+            "T1-BACKEND-001",
+            "--note",
+            kickoff_note,
+        ],
+        cwd=control_root,
+    )
+    run(["git", "commit", "-m", "guard cleared"], cwd=worktree_root)
+
+    commit_sha = run(["git", "rev-parse", "HEAD"], cwd=worktree_root).stdout.strip()
+    review_path = control_root / "reviews" / f"{branch.replace('/', '__')}__{commit_sha}.json"
+    wait_for_file(review_path)
+
+    report = json.loads(review_path.read_text(encoding="utf-8"))
+    if report["decision"] != "ALLOW_MERGE_TO_BASE":
+        raise SystemExit(f"Unexpected review decision: {report['decision']}")
+
+    handoffs_text = (control_root / "HANDOFFS.md").read_text(encoding="utf-8")
+    if commit_sha not in handoffs_text:
+        raise SystemExit("Automated review did not append a handoff record")
+
+    write_allow_handoff(control_root, review_ref)
+    run(
+        [
+            "bash",
+            str(control_root / "thread_branch_flow.sh"),
+            "finish",
+            "--branch",
+            branch,
+            "--review-ref",
+            review_ref,
+            "--task",
+            "T1-BACKEND-001",
+            "--note",
+            finish_note,
+            "--cleanup-source",
+        ],
+        cwd=control_root,
+    )
+
+    exported = run(["python3", str(control_root / "scripts" / "export_status.py")], cwd=control_root)
+    payload = json.loads(exported.stdout)
+    if not payload.get("threads"):
+        raise SystemExit("No threads exported from self-test snapshot")
+
+
 def main() -> None:
     source_root = Path(__file__).resolve().parents[1]
     with tempfile.TemporaryDirectory(prefix="codex-coordination-self-test-") as temp_dir:
         temp_root = Path(temp_dir)
-        control_root = temp_root / "control"
-        target_repo = temp_root / "target"
         fake_codex = temp_root / "fake-codex"
-
-        copy_control_plane(source_root, control_root)
-        control_root.joinpath("runtime").mkdir(parents=True, exist_ok=True)
         write_fake_codex(fake_codex)
 
+        control_root = temp_root / "control"
+        target_repo = temp_root / "target"
+        copy_control_plane(source_root, control_root)
+        control_root.joinpath("runtime").mkdir(parents=True, exist_ok=True)
         init_git_repo(control_root)
         run(["git", "add", "."], cwd=control_root)
         run(["git", "commit", "-m", "seed control plane"], cwd=control_root)
@@ -148,99 +241,35 @@ def main() -> None:
         run(["git", "add", "README.md"], cwd=target_repo)
         run(["git", "commit", "-m", "seed target"], cwd=target_repo)
 
-        run(
-            [
-                "bash",
-                str(control_root / "register_project.sh"),
-                "--target-repo",
-                str(target_repo),
-                "--codex-bin",
-                str(fake_codex),
-            ],
-            cwd=control_root,
-        )
-        if (target_repo / ".gitignore").exists():
-            run(["git", "add", ".gitignore"], cwd=target_repo)
-            run(["git", "commit", "-m", "register codex coordination"], cwd=target_repo)
-
-        run(["bash", str(control_root / "doctor.sh"), "--require-hooks"], cwd=control_root)
-
-        run(
-            [
-                "bash",
-                str(control_root / "thread_branch_flow.sh"),
-                "start",
-                "--thread",
-                "thread1",
-                "--scope",
-                "guard-check",
-            ],
-            cwd=control_root,
-        )
-        branch = "codex/thread1"
-        worktree_root = target_repo / ".codex-worktrees" / branch.replace("/", "__")
-        (worktree_root / "backend.txt").write_text("first change\n", encoding="utf-8")
-        run(["git", "add", "backend.txt"], cwd=worktree_root)
-        blocked_commit = run(["git", "commit", "-m", "should be blocked"], cwd=worktree_root, check=False)
-        if blocked_commit.returncode == 0:
-            raise SystemExit("pre-commit guard did not block commit without task claim / kickoff")
-
-        run(
-            [
-                "python3",
-                str(control_root / "scripts" / "coord_task_event.py"),
-                "start",
-                "--thread",
-                "thread1",
-                "--task",
-                "T1-BACKEND-001",
-                "--note",
-                "self-test kickoff",
-            ],
-            cwd=control_root,
-        )
-        run(["git", "commit", "-m", "guard cleared"], cwd=worktree_root)
-
-        commit_sha = run(["git", "rev-parse", "HEAD"], cwd=worktree_root).stdout.strip()
-        review_path = control_root / "reviews" / f"{branch.replace('/', '__')}__{commit_sha}.json"
-        wait_for_file(review_path)
-
-        report = json.loads(review_path.read_text(encoding="utf-8"))
-        if report["decision"] != "ALLOW_MERGE_TO_BASE":
-            raise SystemExit(f"Unexpected review decision: {report['decision']}")
-
-        handoffs_text = (control_root / "HANDOFFS.md").read_text(encoding="utf-8")
-        if commit_sha not in handoffs_text:
-            raise SystemExit("Automated review did not append a handoff record")
-
-        review_ref = "H-T3-THREAD1-SELFTEST"
-        write_allow_handoff(control_root, review_ref)
-        run(
-            [
-                "bash",
-                str(control_root / "thread_branch_flow.sh"),
-                "finish",
-                "--branch",
-                branch,
-                "--review-ref",
-                review_ref,
-                "--task",
-                "T1-BACKEND-001",
-                "--note",
-                "self test merge",
-                "--cleanup-source",
-            ],
-            cwd=control_root,
+        register_project(control_root, target_repo, fake_codex)
+        exercise_thread_flow(
+            control_root=control_root,
+            target_repo=target_repo,
+            kickoff_note="self-test kickoff",
+            review_ref="H-T3-THREAD1-SELFTEST",
+            finish_note="self test merge",
         )
 
-        exported = run(["python3", str(control_root / "scripts" / "export_status.py")], cwd=control_root)
-        payload = json.loads(exported.stdout)
-        if not payload.get("threads"):
-            raise SystemExit("No threads exported from self-test snapshot")
+        self_root = temp_root / "self-control"
+        copy_control_plane(source_root, self_root)
+        self_root.joinpath("runtime").mkdir(parents=True, exist_ok=True)
+        init_git_repo(self_root)
+        run(["git", "add", "."], cwd=self_root)
+        run(["git", "commit", "-m", "seed self control plane"], cwd=self_root)
+
+        register_project(self_root, self_root, fake_codex)
+        exercise_thread_flow(
+            control_root=self_root,
+            target_repo=self_root,
+            kickoff_note="self-register kickoff",
+            review_ref="H-T3-THREAD1-SELFREGISTER",
+            finish_note="self-register merge",
+        )
 
         print("Self-test passed.")
         print(f"Control root: {control_root}")
         print(f"Target repo: {target_repo}")
+        print(f"Self-register root: {self_root}")
 
 
 if __name__ == "__main__":

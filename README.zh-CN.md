@@ -59,6 +59,8 @@ Codex Coordination Kit 用来把一个普通 git 仓库改造成多线程 Codex 
 
 默认生产线程现在使用“每线程一条长期分支”的模式。执行 `thread_branch_flow.sh start` 时，如果 `codex/threadX` 已经存在，就会直接复用它的 worktree，并在开始编码前把最新基线分支合并进去。
 
+如果你把这个仓库直接注册给它自己作为内置 demo，`finish` 会允许 `TASK_BOARD.md`、`COMM_LOG.md`、`HANDOFFS.md`、`reviews/`、`rewrite_requests/`、`runtime/` 这些协作运行产物处于脏状态，不会因为实时任务/Review 更新而卡住 merge back。
+
 ## 快速开始
 
 1. 把这个仓库 clone 到你希望放控制面的目录。
@@ -175,6 +177,8 @@ python3 scripts/coord_task_event.py finish --thread thread2 --task T2-BOARD-001 
 ```bash
 python3 scripts/self_test.py
 ```
+
+这条烟测现在会同时覆盖两种场景：控制面和目标仓库分离的标准接入，以及“这个仓库注册给自己”的 demo 自举模式。
 
 ## 这个仓库需要单独登录 Codex 吗
 

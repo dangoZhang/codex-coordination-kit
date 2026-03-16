@@ -59,6 +59,8 @@ You can keep this as a working demo or replace it by editing `THREADS.json`, `TA
 
 Producer threads use a long-lived per-thread branch by default. Running `thread_branch_flow.sh start` now resumes `codex/threadX` if it already exists, reuses its worktree, and merges the latest base branch into it before work starts.
 
+If you register this repo against itself for the built-in demo, `finish` tolerates dirty coordination runtime files such as `TASK_BOARD.md`, `COMM_LOG.md`, `HANDOFFS.md`, `reviews/`, `rewrite_requests/`, and `runtime/`, so live review/task updates do not block merge-back.
+
 ## Quick Start
 
 1. Clone this repo where you want the control plane to live.
@@ -175,6 +177,8 @@ For a lightweight regression smoke test of the full registration flow, use:
 ```bash
 python3 scripts/self_test.py
 ```
+
+The smoke test covers both the normal split control-plane/target-repo setup and the self-registering demo setup where this repo acts as both control plane and target repo.
 
 ## Does This Require A Codex Login
 

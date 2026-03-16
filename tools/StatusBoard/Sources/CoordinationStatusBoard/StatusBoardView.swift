@@ -300,7 +300,7 @@ struct ThreadRegistryWindow: View {
 
         guard trimmedId.hasPrefix("thread"),
               Int(trimmedId.dropFirst("thread".count)) != nil else {
-            throw NSError(domain: "ThreadRegistry", code: 1, userInfo: [NSLocalizedDescriptionKey: "线程 ID 必须是 thread8 这种格式"])
+            throw NSError(domain: "ThreadRegistry", code: 1, userInfo: [NSLocalizedDescriptionKey: "线程 ID 必须是 thread0 这种格式"])
         }
         guard !trimmedSlot.isEmpty, !trimmedName.isEmpty, !trimmedRole.isEmpty else {
             throw NSError(domain: "ThreadRegistry", code: 2, userInfo: [NSLocalizedDescriptionKey: "槽位、名称和职责都必须填写"])

@@ -6,7 +6,7 @@ import re
 import subprocess
 from pathlib import Path
 
-from common import git, load_config, load_threads
+from common import git, load_config, load_threads, run
 
 
 def sanitize_scope(value: str) -> str:
@@ -46,6 +46,33 @@ def thread_worktrees(target_repo: Path) -> dict[str, str]:
             branch = line.split(" ", 1)[1].replace("refs/heads/", "")
             worktrees[branch] = current_path
     return worktrees
+
+
+def parse_dirty_paths(repo: Path) -> list[str]:
+    rows = run(["git", "-C", str(repo), "status", "--porcelain"], check=False).stdout.splitlines()
+    paths: list[str] = []
+    for row in rows:
+        if len(row) < 4:
+            continue
+        path = row[3:]
+        if " -> " in path:
+            path = path.split(" -> ", 1)[1]
+        paths.append(path)
+    return paths
+
+
+def is_allowed_runtime_dirty(config, repo: Path) -> bool:
+    if repo.resolve() != config.target_repo.resolve():
+        return False
+    if config.target_repo.resolve() != config.coordination_root.resolve():
+        return False
+
+    allowed_files = {"TASK_BOARD.md", "COMM_LOG.md", "HANDOFFS.md"}
+    allowed_prefixes = ("runtime/", "reviews/", "rewrite_requests/")
+    dirty_paths = parse_dirty_paths(repo)
+    if not dirty_paths:
+        return False
+    return all(path in allowed_files or path.startswith(allowed_prefixes) for path in dirty_paths)
 
 
 def select_thread_branch(target_repo: Path, thread_id: str) -> str | None:
@@ -263,7 +290,9 @@ def finish_branch(branch: str, review_ref: str, cleanup_source: bool, task: str 
     temp_worktree: Path | None = None
 
     if current_branch == config.base_branch:
-        if git(config.target_repo, "status", "--porcelain", check=False):
+        if git(config.target_repo, "status", "--porcelain", check=False) and not is_allowed_runtime_dirty(
+            config, config.target_repo
+        ):
             raise SystemExit(f"Target repo {config.base_branch} worktree is dirty")
     else:
         worktrees_raw = git(config.target_repo, "worktree", "list", "--porcelain").splitlines()
@@ -277,7 +306,7 @@ def finish_branch(branch: str, review_ref: str, cleanup_source: bool, task: str 
         )
         merge_dir = temp_worktree
 
-    if git(merge_dir, "status", "--porcelain", check=False):
+    if git(merge_dir, "status", "--porcelain", check=False) and not is_allowed_runtime_dirty(config, merge_dir):
         raise SystemExit(f"Merge worktree is dirty: {merge_dir}")
 
     subprocess.run(["git", "-C", str(merge_dir), "merge", "--no-ff", "--no-edit", branch], check=True)
