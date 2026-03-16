@@ -11,7 +11,8 @@ MARKER = "# managed-by-codex-coordination-kit"
 
 
 def hook_path(repo: Path, hook_name: str) -> Path:
-    return Path(git(repo, "rev-parse", "--git-path", f"hooks/{hook_name}"))
+    raw = Path(git(repo, "rev-parse", "--git-path", f"hooks/{hook_name}"))
+    return raw if raw.is_absolute() else repo / raw
 
 
 def build_hook(managed_command: str, backup_name: str | None) -> str:

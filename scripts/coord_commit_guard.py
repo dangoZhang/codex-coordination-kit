@@ -2,25 +2,15 @@
 from __future__ import annotations
 
 import re
-import subprocess
 
-from common import load_config
+from common import current_worktree, git, load_config
 from coord_task_event import parse_task_rows
-
-
-def git(repo, *args: str) -> str:
-    result = subprocess.run(
-        ["git", "-C", str(repo), *args],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    return result.stdout.strip()
 
 
 def main() -> None:
     config = load_config()
-    branch = git(config.target_repo, "branch", "--show-current")
+    active_repo = current_worktree(config.target_repo)
+    branch = git(active_repo, "branch", "--show-current")
     match = re.match(r"^codex/(thread[0-9]+)-[a-z0-9-]+$", branch)
     if not match:
         return

@@ -5,6 +5,7 @@ import json
 import shutil
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 
 
@@ -62,15 +63,80 @@ def write_allow_handoff(control_root: Path, review_ref: str) -> None:
     )
 
 
+def write_fake_codex(path: Path) -> None:
+    path.write_text(
+        """#!/usr/bin/env python3
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+
+def main() -> int:
+    args = sys.argv[1:]
+    if not args or args[0] != "exec":
+        return 0
+
+    output_path = None
+    idx = 1
+    while idx < len(args):
+        current = args[idx]
+        if current == "-o" and idx + 1 < len(args):
+            output_path = Path(args[idx + 1])
+            idx += 2
+            continue
+        if current in {"--cd", "--output-schema"} and idx + 1 < len(args):
+            idx += 2
+            continue
+        idx += 1
+
+    if output_path is not None:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(
+            json.dumps(
+                {
+                    "decision": "ALLOW_MERGE_TO_BASE",
+                    "summary": "fake codex review passed",
+                    "findings": [],
+                    "tests_recommended": []
+                },
+                ensure_ascii=False,
+                indent=2,
+            ) + "\\n",
+            encoding="utf-8",
+        )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+""",
+        encoding="utf-8",
+    )
+    path.chmod(0o755)
+
+
+def wait_for_file(path: Path, timeout_seconds: float = 10.0) -> None:
+    deadline = time.time() + timeout_seconds
+    while time.time() < deadline:
+        if path.exists() and path.stat().st_size > 0:
+            return
+        time.sleep(0.2)
+    raise SystemExit(f"Timed out waiting for file: {path}")
+
+
 def main() -> None:
     source_root = Path(__file__).resolve().parents[1]
     with tempfile.TemporaryDirectory(prefix="codex-coordination-self-test-") as temp_dir:
         temp_root = Path(temp_dir)
         control_root = temp_root / "control"
         target_repo = temp_root / "target"
+        fake_codex = temp_root / "fake-codex"
 
         copy_control_plane(source_root, control_root)
         control_root.joinpath("runtime").mkdir(parents=True, exist_ok=True)
+        write_fake_codex(fake_codex)
 
         init_git_repo(control_root)
         run(["git", "add", "."], cwd=control_root)
@@ -89,13 +155,35 @@ def main() -> None:
                 "--target-repo",
                 str(target_repo),
                 "--codex-bin",
-                "/usr/bin/true",
+                str(fake_codex),
             ],
             cwd=control_root,
         )
         if (target_repo / ".gitignore").exists():
             run(["git", "add", ".gitignore"], cwd=target_repo)
             run(["git", "commit", "-m", "register codex coordination"], cwd=target_repo)
+
+        run(["bash", str(control_root / "doctor.sh"), "--require-hooks"], cwd=control_root)
+
+        run(
+            [
+                "bash",
+                str(control_root / "thread_branch_flow.sh"),
+                "start",
+                "--thread",
+                "thread1",
+                "--scope",
+                "guard-check",
+            ],
+            cwd=control_root,
+        )
+        branch = "codex/thread1-guard-check"
+        worktree_root = target_repo / ".codex-worktrees" / branch.replace("/", "__")
+        (worktree_root / "backend.txt").write_text("first change\n", encoding="utf-8")
+        run(["git", "add", "backend.txt"], cwd=worktree_root)
+        blocked_commit = run(["git", "commit", "-m", "should be blocked"], cwd=worktree_root, check=False)
+        if blocked_commit.returncode == 0:
+            raise SystemExit("pre-commit guard did not block commit without task claim / kickoff")
 
         run(
             [
@@ -111,19 +199,19 @@ def main() -> None:
             ],
             cwd=control_root,
         )
-        run(["python3", str(control_root / "scripts" / "auto_branch_claim.py")], cwd=control_root)
+        run(["git", "commit", "-m", "guard cleared"], cwd=worktree_root)
 
-        branch = next(
-            line
-            for line in run(
-                ["git", "-C", str(target_repo), "for-each-ref", "refs/heads", "--format=%(refname:short)"],
-            ).stdout.splitlines()
-            if line.startswith("codex/thread1-")
-        )
-        worktree_root = target_repo / ".codex-worktrees" / branch.replace("/", "__")
-        (worktree_root / "backend.txt").write_text("backend change\n", encoding="utf-8")
-        run(["git", "add", "backend.txt"], cwd=worktree_root)
-        run(["git", "commit", "-m", "self test change"], cwd=worktree_root)
+        commit_sha = run(["git", "rev-parse", "HEAD"], cwd=worktree_root).stdout.strip()
+        review_path = control_root / "reviews" / f"{branch.replace('/', '__')}__{commit_sha}.json"
+        wait_for_file(review_path)
+
+        report = json.loads(review_path.read_text(encoding="utf-8"))
+        if report["decision"] != "ALLOW_MERGE_TO_BASE":
+            raise SystemExit(f"Unexpected review decision: {report['decision']}")
+
+        handoffs_text = (control_root / "HANDOFFS.md").read_text(encoding="utf-8")
+        if commit_sha not in handoffs_text:
+            raise SystemExit("Automated review did not append a handoff record")
 
         review_ref = "H-T3-THREAD1-SELFTEST"
         write_allow_handoff(control_root, review_ref)
