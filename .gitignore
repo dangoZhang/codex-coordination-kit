@@ -5,4 +5,5 @@ __pycache__/
 coordination.config.json
 reviews/*.json
 rewrite_requests/*.md
+runtime/
 tools/StatusBoard/.build/

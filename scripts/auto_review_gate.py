@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import fcntl
 import json
 import re
 import subprocess
@@ -35,11 +36,36 @@ def current_commit(target_repo: Path) -> str:
     ).stdout.strip()
 
 
+def git_ok(target_repo: Path, *args: str) -> tuple[bool, str]:
+    result = subprocess.run(
+        ["git", "-C", str(target_repo), *args],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    text = (result.stdout or result.stderr).strip()
+    return result.returncode == 0, text
+
+
+def branch_head_sha(target_repo: Path, branch: str) -> str | None:
+    ok, text = git_ok(target_repo, "rev-parse", f"refs/heads/{branch}")
+    return text if ok and text else None
+
+
 def append_failure_log(comm_log: Path, branch: str, message: str) -> None:
     with comm_log.open("a", encoding="utf-8") as handle:
         handle.write(
             f"\n[{now_stamp()}] [thread3] [type: blocker] "
             f"Automated review failed for `{branch}`: {message}\n"
+        )
+
+
+def append_timeout_log(comm_log: Path, branch: str, commit_sha: str, timeout_seconds: int) -> None:
+    with comm_log.open("a", encoding="utf-8") as handle:
+        handle.write(
+            f"\n[{now_stamp()}] [thread3] [type: blocker] "
+            f"Automated review timed out after {timeout_seconds}s for `{branch}` commit `{commit_sha}`. "
+            f"Resubmit manually or reduce the diff size.\n"
         )
 
 
@@ -50,14 +76,25 @@ def run_codex_review(
     commit_sha: str,
     config,
 ) -> dict:
+    changed_files = subprocess.run(
+        ["git", "-C", str(target_repo), "diff-tree", "--no-commit-id", "--name-only", "-r", commit_sha],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.splitlines()
+    changed_block = "\n".join(f"- {name}" for name in changed_files[:40]) if changed_files else "- (unable to resolve changed files)"
     prompt = f"""
 You are acting as thread3 / 03-Review for this repository.
 Review commit {commit_sha} on branch {branch}.
 Prioritize bugs, behavioral regressions, merge risk, and missing tests.
+Focus first on the files changed in this commit and anything directly coupled to them:
+{changed_block}
 Return JSON only following the provided schema.
 Use decision ALLOW_MERGE_TO_BASE only when there are no blocking findings.
 """
     output_file.parent.mkdir(parents=True, exist_ok=True)
+    if output_file.exists():
+        return json.loads(output_file.read_text(encoding="utf-8"))
     command = [
         *config.codex_command,
         "exec",
@@ -70,12 +107,60 @@ Use decision ALLOW_MERGE_TO_BASE only when there are no blocking findings.
         str(output_file),
         prompt,
     ]
-    subprocess.run(command, check=True, capture_output=True, text=True)
+    subprocess.run(
+        command,
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=config.review_timeout_seconds,
+    )
     return json.loads(output_file.read_text(encoding="utf-8"))
 
 
 def sanitize_branch_name(branch: str) -> str:
     return branch.replace("/", "__")
+
+
+def runtime_dir(config) -> Path:
+    return config.coordination_root / "runtime"
+
+
+def request_state_path(config, branch: str) -> Path:
+    path = runtime_dir(config) / "review_requests"
+    path.mkdir(parents=True, exist_ok=True)
+    return path / f"{sanitize_branch_name(branch)}.json"
+
+
+def lock_path(config, branch: str) -> Path:
+    path = runtime_dir(config) / "review_locks"
+    path.mkdir(parents=True, exist_ok=True)
+    return path / f"{sanitize_branch_name(branch)}.lock"
+
+
+def write_review_request_state(config, branch: str, commit_sha: str, source_thread: str) -> None:
+    request_state_path(config, branch).write_text(
+        json.dumps(
+            {
+                "branch": branch,
+                "commit_sha": commit_sha,
+                "source_thread": source_thread,
+                "requested_at": now_stamp(),
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+
+def read_review_request_state(config, branch: str) -> dict:
+    path = request_state_path(config, branch)
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
 
 
 def rewrite_request_path(config, branch: str, commit_sha: str) -> Path:
@@ -286,7 +371,7 @@ def run_auto_rewrite(
 def maybe_auto_finish(config, branch: str, handoff_id: str, decision: str) -> None:
     if decision != "ALLOW_MERGE_TO_BASE" or not config.auto_finish_on_approve:
         return
-    subprocess.run(
+    result = subprocess.run(
         [
             "bash",
             str(config.coordination_root / "thread_branch_flow.sh"),
@@ -299,7 +384,15 @@ def maybe_auto_finish(config, branch: str, handoff_id: str, decision: str) -> No
         ],
         cwd=str(config.coordination_root),
         check=False,
+        capture_output=True,
+        text=True,
     )
+    if result.returncode != 0:
+        append_failure_log(
+            config.coordination_root / "COMM_LOG.md",
+            branch,
+            f"Auto finish failed after `{handoff_id}`: {(result.stderr or result.stdout or '').strip()[-400:] or 'thread_branch_flow finish failed'}",
+        )
 
 
 def maybe_auto_rewrite(
@@ -356,6 +449,41 @@ def maybe_auto_rewrite(
     )
 
 
+def process_review_request(
+    config,
+    active_repo: Path,
+    branch: str,
+    source_thread: str,
+    requested_sha: str,
+) -> None:
+    output_file = config.coordination_root / "reviews" / f"{branch.replace('/', '__')}__{requested_sha}.json"
+    comm_log = config.coordination_root / "COMM_LOG.md"
+
+    try:
+        result = run_codex_review(active_repo, output_file, branch, requested_sha, config)
+    except FileNotFoundError as exc:
+        append_failure_log(comm_log, branch, str(exc))
+        return
+    except subprocess.TimeoutExpired:
+        append_timeout_log(comm_log, branch, requested_sha, config.review_timeout_seconds)
+        return
+    except subprocess.CalledProcessError as exc:
+        stderr = (exc.stderr or exc.stdout or "").strip()
+        append_failure_log(comm_log, branch, stderr[-400:] if stderr else "codex exec failed")
+        return
+
+    handoff_id = append_records(config, branch, requested_sha, source_thread, result)
+
+    latest_sha = branch_head_sha(active_repo, branch)
+    if latest_sha != requested_sha:
+        if latest_sha:
+            write_review_request_state(config, branch, latest_sha, source_thread)
+        return
+
+    maybe_auto_rewrite(config, active_repo, branch, requested_sha, source_thread, result, handoff_id)
+    maybe_auto_finish(config, branch, handoff_id, result["decision"])
+
+
 def main() -> None:
     try:
         config = load_config()
@@ -371,23 +499,35 @@ def main() -> None:
     if not source_thread or source_thread == "thread3":
         return
 
-    commit_sha = current_commit(active_repo)
-    output_file = config.coordination_root / "reviews" / f"{branch.replace('/', '__')}__{commit_sha}.json"
-    comm_log = config.coordination_root / "COMM_LOG.md"
+    write_review_request_state(config, branch, current_commit(active_repo), source_thread)
 
-    try:
-        result = run_codex_review(active_repo, output_file, branch, commit_sha, config)
-    except FileNotFoundError as exc:
-        append_failure_log(comm_log, branch, str(exc))
-        return
-    except subprocess.CalledProcessError as exc:
-        stderr = (exc.stderr or exc.stdout or "").strip()
-        append_failure_log(comm_log, branch, stderr[-400:] if stderr else "codex exec failed")
-        return
+    with lock_path(config, branch).open("w", encoding="utf-8") as lock_file:
+        try:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return
 
-    handoff_id = append_records(config, branch, commit_sha, source_thread, result)
-    maybe_auto_rewrite(config, active_repo, branch, commit_sha, source_thread, result, handoff_id)
-    maybe_auto_finish(config, branch, handoff_id, result["decision"])
+        while True:
+            request = read_review_request_state(config, branch)
+            requested_sha = request.get("commit_sha") or branch_head_sha(active_repo, branch)
+            requested_thread = request.get("source_thread") or source_thread
+            if not requested_sha:
+                return
+
+            output_file = config.coordination_root / "reviews" / f"{branch.replace('/', '__')}__{requested_sha}.json"
+            if output_file.exists():
+                latest_sha = branch_head_sha(active_repo, branch)
+                if latest_sha == requested_sha:
+                    return
+                if latest_sha:
+                    write_review_request_state(config, branch, latest_sha, requested_thread)
+                continue
+
+            process_review_request(config, active_repo, branch, requested_thread, requested_sha)
+            latest_sha = branch_head_sha(active_repo, branch)
+            if latest_sha == requested_sha or latest_sha is None:
+                return
+            write_review_request_state(config, branch, latest_sha, requested_thread)
 
 
 if __name__ == "__main__":

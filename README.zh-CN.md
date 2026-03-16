@@ -113,6 +113,7 @@ bash thread_branch_flow.sh finish \
 - 控制面仓库 `post-commit`：扫描 `TASK_BOARD.md`，为 `auto_branch: true` 且已进入 `IN_PROGRESS` 的线程自动创建 worktree
 - 目标仓库 `post-commit`：对当前线程分支执行 `codex exec --output-schema`，并把结果写入 `reviews/`、`HANDOFFS.md`、`COMM_LOG.md`
 - 如果 review 返回 `BLOCK_MERGE_TO_BASE`，工具会在 `rewrite_requests/` 下生成重写召回单；若开启配置，还会自动重新调用申请者线程继续修复
+- review hook 会在 `runtime/` 下维护按分支划分的锁，避免连续提交时并发跑出多个重叠 review；如果 review 期间同一分支又有新 commit，它会自动追到该分支最新的 commit 再继续审
 
 如果已有 `post-commit` hook，安装器会先把原文件挪到 `post-commit.pre-codex-coordination`，然后串起来继续执行。
 
@@ -147,6 +148,7 @@ bash thread_branch_flow.sh finish \
 - `auto_finish_on_approve`：review 通过后是否自动执行 `finish`
 - `auto_rewrite_on_block`：review 被阻塞后，是否自动在当前 worktree 重新调用申请者线程修复
 - `max_auto_rewrite_attempts`：同一线程分支上的自动重写最大尝试次数，用来防止死循环
+- `review_timeout_seconds`：单次自动 review 的超时时间；超时后 hook 会记录 blocker 并退出
 
 ## Git 说明
 

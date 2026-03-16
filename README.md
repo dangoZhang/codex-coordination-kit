@@ -113,6 +113,7 @@ bash thread_branch_flow.sh finish \
 - coordination repo `post-commit`: scans `TASK_BOARD.md` for `IN_PROGRESS` rows and auto-creates thread worktrees for threads with `auto_branch: true`
 - target repo `post-commit`: runs `codex exec --output-schema` against the current thread branch and writes the gate result into `reviews/`, `HANDOFFS.md`, and `COMM_LOG.md`
 - if a review returns `BLOCK_MERGE_TO_BASE`, the kit emits a rewrite request under `rewrite_requests/` and can optionally re-invoke the applicant thread with `codex exec`
+- the review hook keeps a per-branch lock under `runtime/` so repeated commits do not launch overlapping reviews, and it will automatically chase the newest commit on the same branch if a newer commit lands while review is still running
 
 The installer preserves an existing `post-commit` hook by moving it to `post-commit.pre-codex-coordination` and chaining to it.
 
@@ -147,6 +148,7 @@ Fields:
 - `auto_finish_on_approve`: whether an approved review should immediately run `finish`
 - `auto_rewrite_on_block`: whether a blocked review should automatically re-invoke the applicant thread on the current worktree
 - `max_auto_rewrite_attempts`: loop guard for auto rewrite retries on the same branch
+- `review_timeout_seconds`: timeout for a single automated review invocation before the hook logs a blocker and exits
 
 ## Git Notes
 
