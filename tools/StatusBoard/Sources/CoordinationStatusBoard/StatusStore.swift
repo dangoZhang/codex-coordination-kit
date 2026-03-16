@@ -65,8 +65,8 @@ final class StatusBoardStore: ObservableObject {
     }
 
     var menuBarTitle: String {
-        guard let snapshot else { return "CoordX" }
-        return "B\(snapshot.totals.blocked) W\(snapshot.totals.inProgress)"
+        guard let snapshot else { return "协作看板" }
+        return "阻\(snapshot.totals.blocked) 进\(snapshot.totals.inProgress)"
     }
 
     var coordinationRootURL: URL? {
@@ -92,6 +92,10 @@ final class StatusBoardStore: ObservableObject {
     func openCommLog() {
         guard let root = coordinationRootURL else { return }
         NSWorkspace.shared.open(root.appendingPathComponent("COMM_LOG.md"))
+    }
+
+    func quitApplication() {
+        NSApp.terminate(nil)
     }
 
     func loadThreadRegistry() throws -> [ThreadRegistryEntry] {
@@ -133,7 +137,7 @@ final class StatusBoardStore: ObservableObject {
     }
 
     func openThreadRegistry(seed: ThreadRegistryEntry? = nil) {
-        let title = seed == nil ? "Register Thread" : "Edit Thread"
+        let title = seed == nil ? "注册线程" : "编辑线程"
         let view = ThreadRegistryWindow(store: self, seed: seed)
         if let controller = registryWindowController {
             controller.update(title: title, rootView: AnyView(view))
@@ -166,12 +170,12 @@ final class StatusBoardStore: ObservableObject {
     func openCollaborationGuide(for thread: Snapshot.ThreadItem) {
         let view = CollaborationGuideWindow(store: self, thread: thread, entry: registryEntry(for: thread))
         if let controller = guideWindowController {
-            controller.update(title: "Collaboration Guide", rootView: AnyView(view))
+            controller.update(title: "协作说明", rootView: AnyView(view))
             controller.present()
             return
         }
         let controller = HostedWindowController(
-            title: "Collaboration Guide",
+            title: "协作说明",
             size: NSSize(width: 620, height: 640),
             rootView: AnyView(view)
         )
@@ -183,7 +187,7 @@ final class StatusBoardStore: ObservableObject {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(buildStarterPrompt(for: entry), forType: .string)
-        copyFeedback = "Copied prompt for \(entry.name)"
+        copyFeedback = "已复制 \(entry.name) 的启动指令"
     }
 
     func buildStarterPrompt(for entry: ThreadRegistryEntry) -> String {
@@ -191,10 +195,10 @@ final class StatusBoardStore: ObservableObject {
         let baseBranch = snapshot?.baseBranch ?? "main"
         let startCommand = "bash thread_branch_flow.sh start --thread \(entry.id) --scope <scope>"
         return """
-        You are `\(entry.name)` (`\(entry.id)`) and own `\(entry.role)`.
+        你现在是 `\(entry.name)`（`\(entry.id)`），负责 `\(entry.role)`。
 
-        Before coding:
-        1. Read these coordination files in `\(rootPath)`:
+        开始编码前：
+        1. 阅读 `\(rootPath)` 下这些协作文件：
            - README.md
            - OWNERSHIP.md
            - THREAD_BRIEFS.md
@@ -202,22 +206,22 @@ final class StatusBoardStore: ObservableObject {
            - COMM_LOG.md
            - HANDOFFS.md
            - THREADS.json
-        2. Only claim work that stays inside your ownership lane.
-        3. Start a fresh branch/worktree from the configured base branch `\(baseBranch)`:
+        2. 只认领属于你职责范围内的工作。
+        3. 从配置的基线分支 `\(baseBranch)` 创建新的 branch/worktree：
            `\(startCommand)`
-        4. Write a kickoff entry in COMM_LOG.md before touching tracked target-repo files.
+        4. 在修改受 git 跟踪的业务仓文件前，先在 COMM_LOG.md 写 kickoff。
 
-        While working:
-        - Keep TASK_BOARD.md current.
-        - Stay on your assigned branch/worktree.
-        - Finish with a clear handoff when the branch is ready.
+        工作过程中：
+        - 保持 TASK_BOARD.md 状态最新。
+        - 始终在分配给你的 branch/worktree 中工作。
+        - 分支准备好后，写清晰的 handoff。
 
-        If thread3 blocks the branch:
-        - Read the newest review report in `reviews/`.
-        - Read the newest rewrite request in `rewrite_requests/`.
-        - Make the smallest safe fix on the same branch.
-        - Run focused validation and create a new commit.
-        - Do not merge to `\(baseBranch)` until thread3 explicitly allows it.
+        如果 thread3 阻塞了分支：
+        - 阅读 `reviews/` 里的最新 review 报告。
+        - 阅读 `rewrite_requests/` 里的最新重写请求。
+        - 在同一条分支上做最小必要修复。
+        - 运行有针对性的验证并提交新的 commit。
+        - 在 thread3 明确放行前，不要合并到 `\(baseBranch)`。
         """
     }
 
@@ -228,7 +232,7 @@ final class StatusBoardStore: ObservableObject {
         try process.run()
         process.waitUntilExit()
         if process.terminationStatus != 0 {
-            throw NSError(domain: "StarterPrompt", code: 2, userInfo: [NSLocalizedDescriptionKey: "Failed to regenerate THREAD_STARTER_PROMPTS.md"])
+            throw NSError(domain: "StarterPrompt", code: 2, userInfo: [NSLocalizedDescriptionKey: "重新生成 THREAD_STARTER_PROMPTS.md 失败"])
         }
     }
 

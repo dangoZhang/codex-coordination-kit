@@ -70,7 +70,7 @@ struct StatusBoardPreviewApp: App {
     @StateObject private var store = StatusBoardStore()
 
     var body: some Scene {
-        WindowGroup("CodeX Thread Board") {
+        WindowGroup("CodeX 线程看板") {
             StatusBoardView(store: store)
         }
         .defaultSize(width: 470, height: 640)

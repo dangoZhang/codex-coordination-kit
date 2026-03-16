@@ -29,20 +29,20 @@ struct StatusBoardView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("CodeX Thread Board")
+            Text("CodeX 线程看板")
                 .font(.system(size: 16, weight: .semibold))
             if let snapshot = store.snapshot {
-                Text("Repo: \(snapshot.repo.currentBranch)\(snapshot.repo.dirty ? " · dirty" : "")")
+                Text("仓库：\(snapshot.repo.currentBranch)\(snapshot.repo.dirty ? " · 有未提交改动" : "")")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                 HStack(spacing: 8) {
-                    Pill(label: "Blocked", value: snapshot.totals.blocked, color: .red)
-                    Pill(label: "In Progress", value: snapshot.totals.inProgress, color: .blue)
-                    Pill(label: "Todo", value: snapshot.totals.todo, color: .orange)
-                    Pill(label: "Done", value: snapshot.totals.done, color: .green)
+                    Pill(label: "阻塞", value: snapshot.totals.blocked, color: .red)
+                    Pill(label: "进行中", value: snapshot.totals.inProgress, color: .blue)
+                    Pill(label: "待办", value: snapshot.totals.todo, color: .orange)
+                    Pill(label: "完成", value: snapshot.totals.done, color: .green)
                 }
                 if !snapshot.repo.legacyLocalBranches.isEmpty {
-                    Text("Legacy branches: \(snapshot.repo.legacyLocalBranches.joined(separator: ", "))")
+                    Text("遗留分支：\(snapshot.repo.legacyLocalBranches.joined(separator: ", "))")
                         .font(.system(size: 11))
                         .foregroundStyle(.orange)
                         .lineLimit(2)
@@ -58,12 +58,14 @@ struct StatusBoardView: View {
 
     private var footer: some View {
         HStack {
-            Button("Refresh") { store.reload() }
-            Button("Register Thread") { store.openThreadRegistry() }
-            Button("Task Board") { store.openTaskBoard() }
-            Button("Comm Log") { store.openCommLog() }
-            Button("Coord Repo") { store.openCoordinationRoot() }
-            Button("Target Repo") { store.openTargetRepo() }
+            Button("刷新") { store.reload() }
+            Button("注册线程") { store.openThreadRegistry() }
+            Button("任务板") { store.openTaskBoard() }
+            Button("通信日志") { store.openCommLog() }
+            Button("协作仓") { store.openCoordinationRoot() }
+            Button("业务仓") { store.openTargetRepo() }
+            Spacer(minLength: 0)
+            Button("退出") { store.quitApplication() }
         }
         .buttonStyle(.bordered)
     }
@@ -98,7 +100,7 @@ private struct ThreadCard: View {
                 Text(thread.displayName)
                     .font(.system(size: 13, weight: .semibold))
                 Spacer()
-                Text(thread.task?.status ?? "IDLE")
+                Text(localizedStatus(thread.task?.status ?? "IDLE"))
                     .font(.system(size: 10, weight: .semibold))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
@@ -106,7 +108,7 @@ private struct ThreadCard: View {
                     .foregroundStyle(statusColor)
             }
 
-            Text("\(thread.thread) · Slot \(thread.slot) · \(thread.autoBranch ? "Auto branch" : "Manual branch")")
+            Text("\(thread.thread) · 槽位 \(thread.slot) · \(thread.autoBranch ? "自动建分支" : "手动建分支")")
                 .font(.system(size: 10))
                 .foregroundStyle(.secondary)
 
@@ -125,22 +127,22 @@ private struct ThreadCard: View {
             }
 
             if let log = thread.lastLog {
-                Text("Latest log: [\(log.timestamp)] \(prettyLogType(log.type)) · \(log.message)")
+                Text("最新日志：[ \(log.timestamp) ] \(prettyLogType(log.type)) · \(log.message)")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .lineLimit(3)
             }
 
             let locals = thread.branches.local.map(\.name).joined(separator: ", ")
-            Text(locals.isEmpty ? "Local branches: none" : "Local branches: \(locals)")
+            Text(locals.isEmpty ? "本地分支：无" : "本地分支：\(locals)")
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
                 .lineLimit(2)
 
             HStack {
-                Button("Guide") { store.openCollaborationGuide(for: thread) }
-                Button("Edit") { store.openThreadRegistry(seed: entry) }
-                Button("Copy Prompt") { store.copyStarterPrompt(for: entry) }
+                Button("协作说明") { store.openCollaborationGuide(for: thread) }
+                Button("编辑") { store.openThreadRegistry(seed: entry) }
+                Button("复制指令") { store.copyStarterPrompt(for: entry) }
             }
             .buttonStyle(.bordered)
         }
@@ -151,9 +153,9 @@ private struct ThreadCard: View {
 
     private var taskSummary: String {
         guard let task = thread.task else {
-            return "No task claimed yet. Register the thread or claim a task in TASK_BOARD.md."
+            return "当前还没有认领任务。请先注册线程或在 TASK_BOARD.md 中认领任务。"
         }
-        return "Current task: \(task.id) · \(task.title)"
+        return "当前任务：\(task.id) · \(task.title)"
     }
 
     private var statusColor: Color {
@@ -168,7 +170,7 @@ private struct ThreadCard: View {
 
     private var runtimeText: String? {
         guard let invocation = thread.lastInvocation else { return nil }
-        return "Last run duration: \(formatDuration(invocation.elapsedSeconds)) · ended with \(prettyLogType(invocation.endType))"
+        return "上次运行耗时：\(formatDuration(invocation.elapsedSeconds)) · 结束状态：\(prettyLogType(invocation.endType))"
     }
 
     private func formatDuration(_ seconds: Int) -> String {
@@ -185,9 +187,39 @@ private struct ThreadCard: View {
     }
 
     private func prettyLogType(_ value: String) -> String {
-        value
-            .replacingOccurrences(of: "_", with: " ")
-            .capitalized
+        switch value {
+        case "kickoff":
+            return "启动"
+        case "update":
+            return "更新"
+        case "blocker":
+            return "阻塞"
+        case "handoff":
+            return "交接"
+        case "allow_merge_to_base":
+            return "允许合并"
+        case "block_merge_to_base":
+            return "阻止合并"
+        default:
+            return value.replacingOccurrences(of: "_", with: " ")
+        }
+    }
+
+    private func localizedStatus(_ value: String) -> String {
+        switch value {
+        case "BLOCKED":
+            return "阻塞"
+        case "IN_PROGRESS":
+            return "进行中"
+        case "TODO":
+            return "待办"
+        case "DONE":
+            return "完成"
+        case "IDLE":
+            return "空闲"
+        default:
+            return value
+        }
     }
 }
 
@@ -204,19 +236,19 @@ struct ThreadRegistryWindow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(seed == nil ? "Register Thread" : "Edit Thread")
+            Text(seed == nil ? "注册线程" : "编辑线程")
                 .font(.system(size: 18, weight: .semibold))
 
-            Text("Use this window for thread registration or role updates. It stays open independently from the menu bar popover.")
+            Text("这个窗口用于注册线程或更新职责。它会以独立窗口保持打开，不受菜单栏弹层收起影响。")
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
 
             Form {
-                TextField("thread id", text: $threadId)
-                TextField("slot", text: $slot)
-                TextField("display name", text: $displayName)
-                TextField("role", text: $role, axis: .vertical)
-                Toggle("Auto create branch on task claim", isOn: $autoBranch)
+                TextField("线程 ID", text: $threadId)
+                TextField("槽位", text: $slot)
+                TextField("显示名称", text: $displayName)
+                TextField("职责", text: $role, axis: .vertical)
+                Toggle("认领任务后自动创建分支", isOn: $autoBranch)
             }
             .formStyle(.grouped)
 
@@ -227,7 +259,7 @@ struct ThreadRegistryWindow: View {
             }
 
             HStack {
-                Button("Copy Prompt") {
+                Button("复制指令") {
                     do {
                         let entry = try makeEntry()
                         store.copyStarterPrompt(for: entry)
@@ -235,7 +267,7 @@ struct ThreadRegistryWindow: View {
                         errorMessage = error.localizedDescription
                     }
                 }
-                Button("Save") {
+                Button("保存") {
                     do {
                         let entry = try makeEntry()
                         try store.saveThread(entry: entry, originalId: seed?.id)
@@ -245,7 +277,7 @@ struct ThreadRegistryWindow: View {
                     }
                 }
                 .keyboardShortcut(.defaultAction)
-                Button("Close") { store.closeThreadRegistry() }
+                Button("关闭") { store.closeThreadRegistry() }
             }
         }
         .padding(18)
@@ -268,10 +300,10 @@ struct ThreadRegistryWindow: View {
 
         guard trimmedId.hasPrefix("thread"),
               Int(trimmedId.dropFirst("thread".count)) != nil else {
-            throw NSError(domain: "ThreadRegistry", code: 1, userInfo: [NSLocalizedDescriptionKey: "thread id must look like thread8"])
+            throw NSError(domain: "ThreadRegistry", code: 1, userInfo: [NSLocalizedDescriptionKey: "线程 ID 必须是 thread8 这种格式"])
         }
         guard !trimmedSlot.isEmpty, !trimmedName.isEmpty, !trimmedRole.isEmpty else {
-            throw NSError(domain: "ThreadRegistry", code: 2, userInfo: [NSLocalizedDescriptionKey: "slot, name, and role are required"])
+            throw NSError(domain: "ThreadRegistry", code: 2, userInfo: [NSLocalizedDescriptionKey: "槽位、名称和职责都必须填写"])
         }
 
         return ThreadRegistryEntry(
@@ -292,30 +324,30 @@ struct CollaborationGuideWindow: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                Text("\(entry.name) Collaboration Guide")
+                Text("\(entry.name) 协作说明")
                     .font(.system(size: 20, weight: .semibold))
 
-                Text("\(entry.id) · Slot \(entry.slot) · \(entry.autoBranch ? "Auto branch enabled" : "Manual branch flow")")
+                Text("\(entry.id) · 槽位 \(entry.slot) · \(entry.autoBranch ? "已启用自动建分支" : "手动分支流程")")
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
 
                 guideSection(
-                    title: "What This Thread Owns",
-                    body: "\(entry.name) handles \(entry.role). Do not pick up work outside that boundary."
+                    title: "负责范围",
+                    body: "\(entry.name) 负责 \(entry.role)。不要认领超出这个边界的工作。"
                 )
 
                 guideSection(
-                    title: "Current Task",
+                    title: "当前任务",
                     body: currentTaskText
                 )
 
                 guideSection(
-                    title: "What To Do Next",
+                    title: "下一步怎么做",
                     body: nextStepText
                 )
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Most Common Command")
+                    Text("最常用命令")
                         .font(.system(size: 14, weight: .semibold))
                     Text("bash thread_branch_flow.sh start --thread \(entry.id) --scope <scope>")
                         .font(.system(size: 12, design: .monospaced))
@@ -325,28 +357,28 @@ struct CollaborationGuideWindow: View {
                 }
 
                 guideSection(
-                    title: "If Thread3 Blocks You",
+                    title: "如果被 thread3 阻塞",
                     body: """
-                    Stay on the same branch. Read the newest review JSON in reviews/ and the newest note in rewrite_requests/.
-                    Make the smallest safe fix, run focused validation, and create a new commit so thread3 can review again.
+                    保持在同一条分支上。先阅读 reviews/ 里的最新 review JSON，再看 rewrite_requests/ 里的最新重写说明。
+                    只做最小必要修复，跑有针对性的验证，然后提交一个新 commit 让 thread3 重新审核。
                     """
                 )
 
                 HStack {
-                    Button("Open Task Board") { store.openTaskBoard() }
-                    Button("Open Comm Log") { store.openCommLog() }
+                    Button("打开任务板") { store.openTaskBoard() }
+                    Button("打开通信日志") { store.openCommLog() }
                 }
                 .buttonStyle(.bordered)
 
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Copyable Prompt")
+                    Text("可复制启动指令")
                         .font(.system(size: 14, weight: .semibold))
                     Text(store.buildStarterPrompt(for: entry))
                         .font(.system(size: 12, design: .monospaced))
                         .textSelection(.enabled)
                         .padding(12)
                         .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    Button("Copy Prompt") {
+                    Button("复制指令") {
                         store.copyStarterPrompt(for: entry)
                     }
                     .buttonStyle(.borderedProminent)
@@ -358,43 +390,43 @@ struct CollaborationGuideWindow: View {
 
     private var currentTaskText: String {
         guard let task = thread.task else {
-            return "No task is assigned right now. Claim one in TASK_BOARD.md before you start editing files."
+            return "当前还没有分配任务。开始改文件前，请先在 TASK_BOARD.md 中认领任务。"
         }
 
         let statusText: String
         switch task.status {
         case "BLOCKED":
-            statusText = "blocked"
+            statusText = "已阻塞"
         case "IN_PROGRESS":
-            statusText = "currently in progress"
+            statusText = "进行中"
         case "DONE":
-            statusText = "already marked done"
+            statusText = "已完成"
         default:
-            statusText = "ready to start"
+            statusText = "待开始"
         }
 
-        return "Task \(task.id) is \(statusText): \(task.title)"
+        return "任务 \(task.id) 当前\(statusText)：\(task.title)"
     }
 
     private var nextStepText: String {
         let branchGuidance = entry.autoBranch
-            ? "After you move the task to IN_PROGRESS, the hook can prepare the branch automatically. If not, run the start command yourself."
-            : "This thread does not auto-create branches. Use the start command yourself when you are ready to work."
+            ? "把任务改成 IN_PROGRESS 后，hook 会自动准备分支；如果没有自动创建，就手动运行上面的 start 命令。"
+            : "这个线程不会自动建分支。准备开始时，请手动运行上面的 start 命令。"
 
         if thread.task == nil {
             return """
-            1. Pick a task in TASK_BOARD.md that matches \(entry.role).
-            2. Mark it IN_PROGRESS.
+            1. 在 TASK_BOARD.md 中挑一个符合 \(entry.role) 职责的任务。
+            2. 把它标记成 IN_PROGRESS。
             3. \(branchGuidance)
-            4. Write a kickoff line in COMM_LOG.md before editing tracked files.
+            4. 在修改受跟踪文件前，先在 COMM_LOG.md 写一条 kickoff。
             """
         }
 
         return """
-        1. Confirm the task still belongs to \(entry.role).
+        1. 先确认这个任务仍然属于 \(entry.role) 的职责范围。
         2. \(branchGuidance)
-        3. Stay inside the thread worktree, keep TASK_BOARD.md current, and finish with a handoff.
-        4. If review blocks the branch, fix it on the same branch and resubmit.
+        3. 全程在该线程的 worktree 中工作，保持 TASK_BOARD.md 状态最新，并在完成时写交接。
+        4. 如果 review 阻塞了分支，就在同一条分支上修复后重新提交。
         """
     }
 
