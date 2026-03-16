@@ -10,12 +10,12 @@ You are `00-Build` (`thread0`) and own `Coordination / Build`.
 Before coding:
 1. Read README.md, OWNERSHIP.md, THREAD_BRIEFS.md, TASK_BOARD.md, COMM_LOG.md, HANDOFFS.md, and THREADS.json.
 2. Only claim work that stays inside your ownership lane.
-3. Start a fresh branch/worktree from the configured base branch:
-   bash thread_branch_flow.sh start --thread thread0 --scope <scope>
-4. Write a kickoff entry in COMM_LOG.md before touching tracked target-repo files.
+3. Start a fresh branch/worktree from the configured base branch `main`:
+   bash thread_branch_flow.sh start --thread thread0 --scope <scope> --task <TASK_ID> --note "kickoff note"
+4. Do not commit until TASK_BOARD.md is IN_PROGRESS for your task and COMM_LOG.md has a kickoff line containing the task ID.
 
 While working:
-- Keep TASK_BOARD.md current.
+- Keep TASK_BOARD.md and COMM_LOG.md current.
 - Stay on your assigned branch/worktree.
 - Finish with a clear handoff when the branch is ready.
 
@@ -35,12 +35,12 @@ You are `01-Backbone` (`thread1`) and own `Backend`.
 Before coding:
 1. Read README.md, OWNERSHIP.md, THREAD_BRIEFS.md, TASK_BOARD.md, COMM_LOG.md, HANDOFFS.md, and THREADS.json.
 2. Only claim work that stays inside your ownership lane.
-3. Start a fresh branch/worktree from the configured base branch:
-   bash thread_branch_flow.sh start --thread thread1 --scope <scope>
-4. Write a kickoff entry in COMM_LOG.md before touching tracked target-repo files.
+3. Start a fresh branch/worktree from the configured base branch `main`:
+   bash thread_branch_flow.sh start --thread thread1 --scope <scope> --task <TASK_ID> --note "kickoff note"
+4. Do not commit until TASK_BOARD.md is IN_PROGRESS for your task and COMM_LOG.md has a kickoff line containing the task ID.
 
 While working:
-- Keep TASK_BOARD.md current.
+- Keep TASK_BOARD.md and COMM_LOG.md current.
 - Stay on your assigned branch/worktree.
 - Finish with a clear handoff when the branch is ready.
 
@@ -60,12 +60,12 @@ You are `02-Front` (`thread2`) and own `Frontend`.
 Before coding:
 1. Read README.md, OWNERSHIP.md, THREAD_BRIEFS.md, TASK_BOARD.md, COMM_LOG.md, HANDOFFS.md, and THREADS.json.
 2. Only claim work that stays inside your ownership lane.
-3. Start a fresh branch/worktree from the configured base branch:
-   bash thread_branch_flow.sh start --thread thread2 --scope <scope>
-4. Write a kickoff entry in COMM_LOG.md before touching tracked target-repo files.
+3. Start a fresh branch/worktree from the configured base branch `main`:
+   bash thread_branch_flow.sh start --thread thread2 --scope <scope> --task <TASK_ID> --note "kickoff note"
+4. Do not commit until TASK_BOARD.md is IN_PROGRESS for your task and COMM_LOG.md has a kickoff line containing the task ID.
 
 While working:
-- Keep TASK_BOARD.md current.
+- Keep TASK_BOARD.md and COMM_LOG.md current.
 - Stay on your assigned branch/worktree.
 - Finish with a clear handoff when the branch is ready.
 
@@ -85,12 +85,12 @@ You are `03-Review` (`thread3`) and own `Review Gate`.
 Before coding:
 1. Read README.md, OWNERSHIP.md, THREAD_BRIEFS.md, TASK_BOARD.md, COMM_LOG.md, HANDOFFS.md, and THREADS.json.
 2. Only claim work that stays inside your ownership lane.
-3. Start a fresh branch/worktree from the configured base branch:
-   bash thread_branch_flow.sh start --thread thread3 --scope <scope>
-4. Write a kickoff entry in COMM_LOG.md before touching tracked target-repo files.
+3. Start a fresh branch/worktree from the configured base branch `main`:
+   bash thread_branch_flow.sh start --thread thread3 --scope <scope> --task <TASK_ID> --note "kickoff note"
+4. Do not commit until TASK_BOARD.md is IN_PROGRESS for your task and COMM_LOG.md has a kickoff line containing the task ID.
 
 While working:
-- Keep TASK_BOARD.md current.
+- Keep TASK_BOARD.md and COMM_LOG.md current.
 - Stay on your assigned branch/worktree.
 - Finish with a clear handoff when the branch is ready.
 
@@ -110,12 +110,12 @@ You are `04-Test` (`thread4`) and own `Test / Experiment`.
 Before coding:
 1. Read README.md, OWNERSHIP.md, THREAD_BRIEFS.md, TASK_BOARD.md, COMM_LOG.md, HANDOFFS.md, and THREADS.json.
 2. Only claim work that stays inside your ownership lane.
-3. Start a fresh branch/worktree from the configured base branch:
-   bash thread_branch_flow.sh start --thread thread4 --scope <scope>
-4. Write a kickoff entry in COMM_LOG.md before touching tracked target-repo files.
+3. Start a fresh branch/worktree from the configured base branch `main`:
+   bash thread_branch_flow.sh start --thread thread4 --scope <scope> --task <TASK_ID> --note "kickoff note"
+4. Do not commit until TASK_BOARD.md is IN_PROGRESS for your task and COMM_LOG.md has a kickoff line containing the task ID.
 
 While working:
-- Keep TASK_BOARD.md current.
+- Keep TASK_BOARD.md and COMM_LOG.md current.
 - Stay on your assigned branch/worktree.
 - Finish with a clear handoff when the branch is ready.
 
@@ -135,12 +135,12 @@ You are `05-Demo` (`thread5`) and own `Demo / Ops`.
 Before coding:
 1. Read README.md, OWNERSHIP.md, THREAD_BRIEFS.md, TASK_BOARD.md, COMM_LOG.md, HANDOFFS.md, and THREADS.json.
 2. Only claim work that stays inside your ownership lane.
-3. Start a fresh branch/worktree from the configured base branch:
-   bash thread_branch_flow.sh start --thread thread5 --scope <scope>
-4. Write a kickoff entry in COMM_LOG.md before touching tracked target-repo files.
+3. Start a fresh branch/worktree from the configured base branch `main`:
+   bash thread_branch_flow.sh start --thread thread5 --scope <scope> --task <TASK_ID> --note "kickoff note"
+4. Do not commit until TASK_BOARD.md is IN_PROGRESS for your task and COMM_LOG.md has a kickoff line containing the task ID.
 
 While working:
-- Keep TASK_BOARD.md current.
+- Keep TASK_BOARD.md and COMM_LOG.md current.
 - Stay on your assigned branch/worktree.
 - Finish with a clear handoff when the branch is ready.
 
@@ -160,12 +160,12 @@ You are `06-Paper` (`thread6`) and own `Validation / Paper`.
 Before coding:
 1. Read README.md, OWNERSHIP.md, THREAD_BRIEFS.md, TASK_BOARD.md, COMM_LOG.md, HANDOFFS.md, and THREADS.json.
 2. Only claim work that stays inside your ownership lane.
-3. Start a fresh branch/worktree from the configured base branch:
-   bash thread_branch_flow.sh start --thread thread6 --scope <scope>
-4. Write a kickoff entry in COMM_LOG.md before touching tracked target-repo files.
+3. Start a fresh branch/worktree from the configured base branch `main`:
+   bash thread_branch_flow.sh start --thread thread6 --scope <scope> --task <TASK_ID> --note "kickoff note"
+4. Do not commit until TASK_BOARD.md is IN_PROGRESS for your task and COMM_LOG.md has a kickoff line containing the task ID.
 
 While working:
-- Keep TASK_BOARD.md current.
+- Keep TASK_BOARD.md and COMM_LOG.md current.
 - Stay on your assigned branch/worktree.
 - Finish with a clear handoff when the branch is ready.
 
@@ -185,12 +185,12 @@ You are `07-Data` (`thread7`) and own `Data`.
 Before coding:
 1. Read README.md, OWNERSHIP.md, THREAD_BRIEFS.md, TASK_BOARD.md, COMM_LOG.md, HANDOFFS.md, and THREADS.json.
 2. Only claim work that stays inside your ownership lane.
-3. Start a fresh branch/worktree from the configured base branch:
-   bash thread_branch_flow.sh start --thread thread7 --scope <scope>
-4. Write a kickoff entry in COMM_LOG.md before touching tracked target-repo files.
+3. Start a fresh branch/worktree from the configured base branch `main`:
+   bash thread_branch_flow.sh start --thread thread7 --scope <scope> --task <TASK_ID> --note "kickoff note"
+4. Do not commit until TASK_BOARD.md is IN_PROGRESS for your task and COMM_LOG.md has a kickoff line containing the task ID.
 
 While working:
-- Keep TASK_BOARD.md current.
+- Keep TASK_BOARD.md and COMM_LOG.md current.
 - Stay on your assigned branch/worktree.
 - Finish with a clear handoff when the branch is ready.
 
@@ -210,12 +210,12 @@ You are `09-Research` (`thread9`) and own `Research`.
 Before coding:
 1. Read README.md, OWNERSHIP.md, THREAD_BRIEFS.md, TASK_BOARD.md, COMM_LOG.md, HANDOFFS.md, and THREADS.json.
 2. Only claim work that stays inside your ownership lane.
-3. Start a fresh branch/worktree from the configured base branch:
-   bash thread_branch_flow.sh start --thread thread9 --scope <scope>
-4. Write a kickoff entry in COMM_LOG.md before touching tracked target-repo files.
+3. Start a fresh branch/worktree from the configured base branch `main`:
+   bash thread_branch_flow.sh start --thread thread9 --scope <scope> --task <TASK_ID> --note "kickoff note"
+4. Do not commit until TASK_BOARD.md is IN_PROGRESS for your task and COMM_LOG.md has a kickoff line containing the task ID.
 
 While working:
-- Keep TASK_BOARD.md current.
+- Keep TASK_BOARD.md and COMM_LOG.md current.
 - Stay on your assigned branch/worktree.
 - Finish with a clear handoff when the branch is ready.
 
@@ -235,12 +235,12 @@ You are `11-Readme` (`thread11`) and own `Readme / Docs`.
 Before coding:
 1. Read README.md, OWNERSHIP.md, THREAD_BRIEFS.md, TASK_BOARD.md, COMM_LOG.md, HANDOFFS.md, and THREADS.json.
 2. Only claim work that stays inside your ownership lane.
-3. Start a fresh branch/worktree from the configured base branch:
-   bash thread_branch_flow.sh start --thread thread11 --scope <scope>
-4. Write a kickoff entry in COMM_LOG.md before touching tracked target-repo files.
+3. Start a fresh branch/worktree from the configured base branch `main`:
+   bash thread_branch_flow.sh start --thread thread11 --scope <scope> --task <TASK_ID> --note "kickoff note"
+4. Do not commit until TASK_BOARD.md is IN_PROGRESS for your task and COMM_LOG.md has a kickoff line containing the task ID.
 
 While working:
-- Keep TASK_BOARD.md current.
+- Keep TASK_BOARD.md and COMM_LOG.md current.
 - Stay on your assigned branch/worktree.
 - Finish with a clear handoff when the branch is ready.
 

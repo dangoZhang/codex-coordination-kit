@@ -47,7 +47,29 @@ def verify_review_ref(coord_root: Path, review_ref: str) -> None:
     raise SystemExit(f"Review ref exists but has no ALLOW_MERGE_TO_BASE marker: {review_ref}")
 
 
-def start_branch(thread: str | None, thread_name: str | None, scope: str) -> None:
+def maybe_record_task_event(config, action: str, thread: str, task: str | None, note: str | None) -> None:
+    if not task and not note:
+        return
+    command = [
+        "python3",
+        str(config.coordination_root / "scripts" / "coord_task_event.py"),
+        action,
+        "--thread",
+        thread,
+    ]
+    if task:
+        command.extend(["--task", task])
+    if note:
+        command.extend(["--note", note])
+    subprocess.run(command, cwd=str(config.coordination_root), check=True)
+
+
+def branch_thread_id(branch: str) -> str | None:
+    match = re.match(r"^codex/(thread[0-9]+)-[a-z0-9][a-z0-9-]*$", branch)
+    return match.group(1) if match else None
+
+
+def start_branch(thread: str | None, thread_name: str | None, scope: str, task: str | None, note: str | None) -> None:
     config = load_config()
     threads = load_threads(config.coordination_root)
     if not thread and thread_name:
@@ -90,6 +112,7 @@ def start_branch(thread: str | None, thread_name: str | None, scope: str) -> Non
         ],
         check=True,
     )
+    maybe_record_task_event(config, "start", thread, task, note)
 
     print("Created:")
     print(f"  branch: {branch}")
@@ -143,7 +166,7 @@ def audit_branches() -> None:
         print(f"{branch:44} {policy:8} {merged_flag:8} {worktree}")
 
 
-def finish_branch(branch: str, review_ref: str, cleanup_source: bool) -> None:
+def finish_branch(branch: str, review_ref: str, cleanup_source: bool, task: str | None, note: str | None) -> None:
     config = load_config()
     verify_review_ref(config.coordination_root, review_ref)
     subprocess.run(
@@ -209,6 +232,10 @@ def finish_branch(branch: str, review_ref: str, cleanup_source: bool) -> None:
         print("Remove temp merge worktree after verification:")
         print(f'  git -C "{config.target_repo}" worktree remove "{temp_worktree}"')
 
+    thread = branch_thread_id(branch)
+    if thread:
+        maybe_record_task_event(config, "finish", thread, task, note)
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Codex thread branch/worktree workflow.")
@@ -218,6 +245,8 @@ def main() -> None:
     start.add_argument("--thread")
     start.add_argument("--thread-name")
     start.add_argument("--scope", required=True)
+    start.add_argument("--task")
+    start.add_argument("--note")
 
     sub.add_parser("audit")
 
@@ -225,14 +254,16 @@ def main() -> None:
     finish.add_argument("--branch", required=True)
     finish.add_argument("--review-ref", required=True)
     finish.add_argument("--cleanup-source", action="store_true")
+    finish.add_argument("--task")
+    finish.add_argument("--note")
 
     args = parser.parse_args()
     if args.cmd == "start":
-        start_branch(args.thread, args.thread_name, args.scope)
+        start_branch(args.thread, args.thread_name, args.scope, args.task, args.note)
     elif args.cmd == "audit":
         audit_branches()
     else:
-        finish_branch(args.branch, args.review_ref, args.cleanup_source)
+        finish_branch(args.branch, args.review_ref, args.cleanup_source, args.task, args.note)
 
 
 if __name__ == "__main__":

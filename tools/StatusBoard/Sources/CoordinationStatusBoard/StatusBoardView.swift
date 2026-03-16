@@ -349,7 +349,7 @@ struct CollaborationGuideWindow: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("最常用命令")
                         .font(.system(size: 14, weight: .semibold))
-                    Text("bash thread_branch_flow.sh start --thread \(entry.id) --scope <scope>")
+                    Text("bash thread_branch_flow.sh start --thread \(entry.id) --scope <scope> --task <TASK_ID> --note \"kickoff note\"")
                         .font(.system(size: 12, design: .monospaced))
                         .textSelection(.enabled)
                         .padding(12)
@@ -418,7 +418,7 @@ struct CollaborationGuideWindow: View {
             1. 在 TASK_BOARD.md 中挑一个符合 \(entry.role) 职责的任务。
             2. 把它标记成 IN_PROGRESS。
             3. \(branchGuidance)
-            4. 在修改受跟踪文件前，先在 COMM_LOG.md 写一条 kickoff。
+            4. 在修改受跟踪文件前，用 `thread_branch_flow.sh --task ... --note ...` 或 `coord_task_event.py start ...` 写入 kickoff。
             """
         }
 

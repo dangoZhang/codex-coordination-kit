@@ -25,10 +25,12 @@ Codex Coordination Kit 用来把一个普通 git 仓库改造成多线程 Codex 
 - `TASK_BOARD.md`：任务看板
 - `COMM_LOG.md`：kickoff / blocker / update 日志
 - `HANDOFFS.md`：正式交接与 merge gate 记录
-- `thread_branch_flow.sh`：创建、审计、合并 branch/worktree
-- `install_hooks.sh`：给两个仓库安装 hooks
+- `thread_branch_flow.sh`：创建、审计、合并 branch/worktree，并可选顺带记录任务事件
+- `install_hooks.sh`：给两个仓库安装协作 hooks
 - `scripts/auto_branch_claim.py`：任务进入 `IN_PROGRESS` 后自动建 worktree
 - `scripts/auto_review_gate.py`：在线程分支提交后调用 `codex exec` 做自动 review
+- `scripts/coord_task_event.py`：用一次命令同时更新 `TASK_BOARD.md` 和 `COMM_LOG.md`
+- `scripts/coord_commit_guard.py`：如果线程没有 `IN_PROGRESS` 任务或 kickoff 日志，就阻止目标仓库提交
 - `scripts/export_status.py`：导出状态 JSON，供看板或其它工具使用
 - `tools/StatusBoard/`：原生 macOS 菜单栏状态看板
 - `rewrite_requests/`：review 被阻塞后生成的重写召回单，默认不纳入版本控制
@@ -83,7 +85,7 @@ tools/StatusBoard/run.sh --preview-window
 2. 让控制面仓库 hook 自动建 branch，或者手动执行：
 
 ```bash
-bash thread_branch_flow.sh start --thread thread11 --scope docs-refresh
+bash thread_branch_flow.sh start --thread thread11 --scope docs-refresh --task T11-DOC-001 --note "kickoff note"
 ```
 
 3. 只在目标仓库生成出来的 worktree 中改代码。
@@ -103,19 +105,30 @@ bash thread_branch_flow.sh audit
 bash thread_branch_flow.sh finish \
   --branch codex/thread11-docs-refresh \
   --review-ref H-T3-THREAD11-AUTO-20260314123456 \
+  --task T11-DOC-001 \
+  --note "merged after thread3 allow" \
   --cleanup-source
+```
+
+如果你不想手工分别改任务板和通信日志，也可以直接用：
+
+```bash
+python3 scripts/coord_task_event.py start --thread thread11 --task T11-DOC-001 --note "kickoff note"
+python3 scripts/coord_task_event.py finish --thread thread11 --task T11-DOC-001 --note "completion note"
 ```
 
 ## Hook 行为
 
-`install_hooks.sh` 会在两个仓库里安装 `post-commit` hook：
+`install_hooks.sh` 会在两个仓库里安装协作 hooks：
 
 - 控制面仓库 `post-commit`：扫描 `TASK_BOARD.md`，为 `auto_branch: true` 且已进入 `IN_PROGRESS` 的线程自动创建 worktree
-- 目标仓库 `post-commit`：对当前线程分支执行 `codex exec --output-schema`，并把结果写入 `reviews/`、`HANDOFFS.md`、`COMM_LOG.md`
+- 目标仓库 `pre-commit`：如果当前线程分支还没有对应的 `IN_PROGRESS` 任务和 kickoff 日志，就阻止提交
+- 目标仓库 `post-commit`：异步执行 `codex exec --output-schema`，并把结果写入 `reviews/`、`HANDOFFS.md`、`COMM_LOG.md`
+- 目标仓库 `pre-push`：在 push 前再次异步触发同样的 review 流程，作为兜底
 - 如果 review 返回 `BLOCK_MERGE_TO_BASE`，工具会在 `rewrite_requests/` 下生成重写召回单；若开启配置，还会自动重新调用申请者线程继续修复
 - review hook 会在 `runtime/` 下维护按分支划分的锁，避免连续提交时并发跑出多个重叠 review；如果 review 期间同一分支又有新 commit，它会自动追到该分支最新的 commit 再继续审
 
-如果已有 `post-commit` hook，安装器会先把原文件挪到 `post-commit.pre-codex-coordination`，然后串起来继续执行。
+如果同名 hook 已经存在，安装器会先把原文件挪到 `<hook>.pre-codex-coordination`，然后串起来继续执行。
 
 ## 这个仓库需要单独登录 Codex 吗
 

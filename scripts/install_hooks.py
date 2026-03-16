@@ -54,19 +54,34 @@ def install(repo: Path, hook_name: str, managed_command: str) -> Path:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Install coordination post-commit hooks.")
+    parser = argparse.ArgumentParser(description="Install coordination hooks for the control-plane and target repo.")
     parser.parse_args()
 
     config = load_config()
     root = config.coordination_root
+    hook_log_dir = root / "runtime" / "hook_logs"
     coord_command = f'python3 {shlex.quote(str(root / "scripts" / "auto_branch_claim.py"))} || true'
-    target_command = f'python3 {shlex.quote(str(root / "scripts" / "auto_review_gate.py"))} || true'
+    target_guard_command = f'python3 {shlex.quote(str(root / "scripts" / "coord_commit_guard.py"))}'
+    target_post_command = (
+        f'mkdir -p {shlex.quote(str(hook_log_dir))}\n'
+        f'nohup python3 {shlex.quote(str(root / "scripts" / "auto_review_gate.py"))} '
+        f'>> {shlex.quote(str(hook_log_dir / "auto_review_post_commit.log"))} 2>&1 &'
+    )
+    target_push_command = (
+        f'mkdir -p {shlex.quote(str(hook_log_dir))}\n'
+        f'nohup python3 {shlex.quote(str(root / "scripts" / "auto_review_gate.py"))} '
+        f'>> {shlex.quote(str(hook_log_dir / "auto_review_pre_push.log"))} 2>&1 &'
+    )
 
     coord_hook = install(root, "post-commit", coord_command)
-    target_hook = install(config.target_repo, "post-commit", target_command)
+    target_pre_commit_hook = install(config.target_repo, "pre-commit", target_guard_command)
+    target_post_commit_hook = install(config.target_repo, "post-commit", target_post_command)
+    target_pre_push_hook = install(config.target_repo, "pre-push", target_push_command)
 
     print(f"Installed coordination hook: {coord_hook}")
-    print(f"Installed target hook: {target_hook}")
+    print(f"Installed target pre-commit hook: {target_pre_commit_hook}")
+    print(f"Installed target post-commit hook: {target_post_commit_hook}")
+    print(f"Installed target pre-push hook: {target_pre_push_hook}")
 
 
 if __name__ == "__main__":

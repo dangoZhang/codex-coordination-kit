@@ -25,10 +25,12 @@ Actual macOS StatusBoard preview window, captured with sanitized sample data:
 - `TASK_BOARD.md`: work queue with ownership and status
 - `COMM_LOG.md`: kickoff, blocker, and update log
 - `HANDOFFS.md`: formal review and merge handoffs
-- `thread_branch_flow.sh`: start, audit, and finish branch/worktree flow
-- `install_hooks.sh`: installs post-commit hooks into both repos
+- `thread_branch_flow.sh`: start, audit, and finish branch/worktree flow, with optional task/log updates
+- `install_hooks.sh`: installs coordination hooks into both repos
 - `scripts/auto_branch_claim.py`: creates worktrees when `IN_PROGRESS` tasks are claimed
 - `scripts/auto_review_gate.py`: runs `codex exec` reviews against thread branches
+- `scripts/coord_task_event.py`: updates `TASK_BOARD.md` and `COMM_LOG.md` together for start/finish/block/retry events
+- `scripts/coord_commit_guard.py`: blocks target-repo commits when the thread has no `IN_PROGRESS` task or kickoff log
 - `scripts/export_status.py`: emits JSON for dashboards or custom boards
 - `tools/StatusBoard/`: macOS menu bar app for a native status board
 - `rewrite_requests/`: gitignored rewrite recall artifacts emitted after blocked reviews
@@ -83,7 +85,7 @@ The board shows the duration of the last completed thread run, measured from the
 2. Let the coordination repo hook auto-create a compliant branch, or create one manually:
 
 ```bash
-bash thread_branch_flow.sh start --thread thread11 --scope docs-refresh
+bash thread_branch_flow.sh start --thread thread11 --scope docs-refresh --task T11-DOC-001 --note "kickoff note"
 ```
 
 3. Work only inside the generated target-repo worktree.
@@ -103,19 +105,30 @@ Merge after an approved handoff:
 bash thread_branch_flow.sh finish \
   --branch codex/thread11-docs-refresh \
   --review-ref H-T3-THREAD11-AUTO-20260314123456 \
+  --task T11-DOC-001 \
+  --note "merged after thread3 allow" \
   --cleanup-source
+```
+
+If you want a single command to claim or finish work without editing markdown manually, use:
+
+```bash
+python3 scripts/coord_task_event.py start --thread thread11 --task T11-DOC-001 --note "kickoff note"
+python3 scripts/coord_task_event.py finish --thread thread11 --task T11-DOC-001 --note "completion note"
 ```
 
 ## Hook Behavior
 
-`install_hooks.sh` installs `post-commit` hooks in both repos:
+`install_hooks.sh` installs coordination hooks in both repos:
 
 - coordination repo `post-commit`: scans `TASK_BOARD.md` for `IN_PROGRESS` rows and auto-creates thread worktrees for threads with `auto_branch: true`
-- target repo `post-commit`: runs `codex exec --output-schema` against the current thread branch and writes the gate result into `reviews/`, `HANDOFFS.md`, and `COMM_LOG.md`
+- target repo `pre-commit`: blocks producer commits until the branch has a matching `IN_PROGRESS` task and kickoff log
+- target repo `post-commit`: launches `codex exec --output-schema` asynchronously against the current thread branch and writes the gate result into `reviews/`, `HANDOFFS.md`, and `COMM_LOG.md`
+- target repo `pre-push`: re-triggers the same asynchronous review flow as a safety net before push
 - if a review returns `BLOCK_MERGE_TO_BASE`, the kit emits a rewrite request under `rewrite_requests/` and can optionally re-invoke the applicant thread with `codex exec`
 - the review hook keeps a per-branch lock under `runtime/` so repeated commits do not launch overlapping reviews, and it will automatically chase the newest commit on the same branch if a newer commit lands while review is still running
 
-The installer preserves an existing `post-commit` hook by moving it to `post-commit.pre-codex-coordination` and chaining to it.
+If an existing hook file is already present for the same hook name, the installer moves it to `<hook>.pre-codex-coordination` and chains to it.
 
 ## Does This Require A Codex Login
 
