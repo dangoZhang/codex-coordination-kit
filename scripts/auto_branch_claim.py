@@ -57,7 +57,7 @@ def main() -> None:
     threads = thread_map(config.coordination_root)
     task_board = config.coordination_root / "TASK_BOARD.md"
     comm_log = config.coordination_root / "COMM_LOG.md"
-    flow_script = config.coordination_root / "thread_branch_flow.sh"
+    flow_script = config.coordination_root / "scripts" / "thread_branch_flow.sh"
 
     branches = set(
         line

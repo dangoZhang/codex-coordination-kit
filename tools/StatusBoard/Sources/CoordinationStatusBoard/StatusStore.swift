@@ -204,8 +204,8 @@ final class StatusBoardStore: ObservableObject {
         let repoConfigNote = "2. 在目标仓库中优先阅读 `AGENTS.md`、`.codex/AGENTS.md`、`.agent/coordination.json`。"
         let persistentBranch = persistentBranch(for: entry.id)
         let startCommand = persistentBranch == nil
-            ? "bash thread_branch_flow.sh start --thread \(entry.id) --scope <scope> --task <TASK_ID> --note \"kickoff note\""
-            : "bash thread_branch_flow.sh start --thread \(entry.id) --task <TASK_ID> --note \"kickoff note\""
+            ? "bash scripts/thread_branch_flow.sh start --thread \(entry.id) --scope <scope> --task <TASK_ID> --note \"kickoff note\""
+            : "bash scripts/thread_branch_flow.sh start --thread \(entry.id) --task <TASK_ID> --note \"kickoff note\""
         let branchInstruction = persistentBranch == nil
             ? "3. 从配置的基线分支 `\(baseBranch)` 创建新的 scoped branch/worktree："
             : "3. 复用配置好的持久分支 `\(persistentBranch!)`，并在每次工作前把它同步到 `\(baseBranch)`："

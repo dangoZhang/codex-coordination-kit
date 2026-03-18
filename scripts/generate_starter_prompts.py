@@ -4,20 +4,27 @@ from __future__ import annotations
 from common import coordination_root, load_config, load_threads, repo_instruction_paths
 
 
+def default_persistent_branches(threads: list[dict[str, object]]) -> dict[str, str]:
+    if any(str(row.get("id")) == "thread1" for row in threads):
+        return {"thread1": "codex/thread1-mainline"}
+    return {}
+
+
 def main() -> None:
     root = coordination_root()
+    threads = load_threads(root)
     config = None
     try:
         config = load_config(root)
         base_branch = config.base_branch
     except SystemExit:
         base_branch = "<base-branch>"
+    persistent_branches = config.persistent_branches if config is not None else default_persistent_branches(threads)
     repo_instruction_text = ""
     if config is not None:
         paths = repo_instruction_paths(config.target_repo)
         if paths:
             repo_instruction_text = ", ".join(f"`{path}`" for path in paths)
-    threads = load_threads(root)
     lines = [
         "# Thread Starter Prompts",
         "",
@@ -26,10 +33,10 @@ def main() -> None:
     ]
 
     for row in threads:
-        persistent_branch = config.persistent_branches.get(row["id"])
+        persistent_branch = persistent_branches.get(row["id"])
         if persistent_branch:
             start_command = (
-                f'bash thread_branch_flow.sh start --thread {row["id"]} --task <TASK_ID> --note "kickoff note"'
+                f'bash scripts/thread_branch_flow.sh start --thread {row["id"]} --task <TASK_ID> --note "kickoff note"'
             )
             branch_instruction = (
                 f"4. Reuse the configured persistent branch `{persistent_branch}` and sync it with "
@@ -37,7 +44,7 @@ def main() -> None:
             )
         else:
             start_command = (
-                f'bash thread_branch_flow.sh start --thread {row["id"]} --scope <scope> --task <TASK_ID> --note "kickoff note"'
+                f'bash scripts/thread_branch_flow.sh start --thread {row["id"]} --scope <scope> --task <TASK_ID> --note "kickoff note"'
             )
             branch_instruction = (
                 f"4. Start a fresh scoped branch/worktree from `{base_branch}` with:"

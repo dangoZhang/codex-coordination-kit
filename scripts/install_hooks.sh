@@ -2,4 +2,4 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-python3 "${SCRIPT_DIR}/scripts/bootstrap.py" --install-hooks --doctor "$@"
+python3 "${SCRIPT_DIR}/install_hooks.py" "$@"

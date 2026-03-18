@@ -166,7 +166,7 @@ def install_repo_instruction_templates(root: Path, target_repo: Path) -> tuple[l
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Bootstrap Codex Coordination Kit against an existing git project."
+        description="Bootstrap Codex Coordination against an existing git project."
     )
     parser.add_argument("--target-repo", required=True, help="Absolute or relative path to the target git repo.")
     parser.add_argument("--base-branch", help="Base branch used for new worktrees and merge-back.")

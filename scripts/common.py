@@ -43,7 +43,7 @@ def load_config(root: Path | None = None) -> CoordinationConfig:
     path = config_path(root)
     if not path.exists():
         raise SystemExit(
-            "Missing coordination.config.json. Run ./bootstrap.sh --target-repo /path/to/repo first."
+            "Missing coordination.config.json. Run ./scripts/bootstrap.sh --target-repo /path/to/repo first."
         )
 
     raw = json.loads(path.read_text(encoding="utf-8"))

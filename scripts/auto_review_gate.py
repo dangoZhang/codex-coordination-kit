@@ -395,7 +395,7 @@ def maybe_auto_finish(config, branch: str, handoff_id: str, decision: str) -> No
     result = subprocess.run(
         [
             "bash",
-            str(config.coordination_root / "thread_branch_flow.sh"),
+            str(config.coordination_root / "scripts" / "thread_branch_flow.sh"),
             "finish",
             "--branch",
             branch,

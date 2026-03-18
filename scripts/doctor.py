@@ -16,7 +16,7 @@ def hook_path(repo: Path, hook_name: str) -> Path:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Validate a Codex Coordination Kit installation.")
+    parser = argparse.ArgumentParser(description="Validate a Codex Coordination installation.")
     parser.add_argument(
         "--require-hooks",
         action="store_true",
@@ -49,9 +49,13 @@ def main() -> None:
         "COMM_LOG.md",
         "HANDOFFS.md",
         "THREAD_STARTER_PROMPTS.md",
+        "scripts/bootstrap.sh",
+        "scripts/doctor.sh",
         "scripts/install_hooks.py",
+        "scripts/install_hooks.sh",
+        "scripts/register_project.sh",
         "scripts/export_status.py",
-        "thread_branch_flow.sh",
+        "scripts/thread_branch_flow.sh",
     ):
         path = root / required
         record(f"file:{required}", path.exists(), str(path))

@@ -12,7 +12,7 @@ Every thread should:
 
 ## Default Demo Template
 
-This repo ships with a compact 5-thread template so the coordination kit can demo itself out of the box:
+This repo ships with a compact 5-thread template so Codex Coordination can demo itself out of the box:
 
 - `thread0` / `00-Product`: product scope, task board, acceptance criteria, and release coordination
 - `thread1` / `01-Backend`: Python automation, hooks, review backend, and export pipeline

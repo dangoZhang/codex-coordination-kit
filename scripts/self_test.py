@@ -130,7 +130,7 @@ def register_project(control_root: Path, target_repo: Path, fake_codex: Path) ->
     run(
         [
             "bash",
-            str(control_root / "register_project.sh"),
+            str(control_root / "scripts" / "register_project.sh"),
             "--target-repo",
             str(target_repo),
             "--codex-bin",
@@ -161,11 +161,11 @@ def register_project(control_root: Path, target_repo: Path, fake_codex: Path) ->
 
 
 def exercise_thread_flow(control_root: Path, target_repo: Path, kickoff_note: str, review_ref: str, finish_note: str) -> None:
-    run(["bash", str(control_root / "doctor.sh"), "--require-hooks"], cwd=control_root)
+    run(["bash", str(control_root / "scripts" / "doctor.sh"), "--require-hooks"], cwd=control_root)
     run(
         [
             "bash",
-            str(control_root / "thread_branch_flow.sh"),
+            str(control_root / "scripts" / "thread_branch_flow.sh"),
             "start",
             "--thread",
             "thread2",
@@ -184,7 +184,7 @@ def exercise_thread_flow(control_root: Path, target_repo: Path, kickoff_note: st
     run(
         [
             "bash",
-            str(control_root / "thread_branch_flow.sh"),
+            str(control_root / "scripts" / "thread_branch_flow.sh"),
             "start",
             "--thread",
             "thread1",
@@ -231,7 +231,7 @@ def exercise_thread_flow(control_root: Path, target_repo: Path, kickoff_note: st
     run(
         [
             "bash",
-            str(control_root / "thread_branch_flow.sh"),
+            str(control_root / "scripts" / "thread_branch_flow.sh"),
             "finish",
             "--branch",
             branch,
