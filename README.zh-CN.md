@@ -1,137 +1,89 @@
-# Codex Coordination Kit
+# Codex Coordination
 
 [English README](README.md)
 
-Codex Coordination Kit 用来把一个普通 git 仓库改造成多线程 Codex 协作工作流，包含：
+Codex Coordination 用来把普通 git 仓库接成一套多线程 Codex 协作流程，包含独立控制面、自动 review gate，以及原生 macOS 状态看板。
 
-- 独立的协作控制面仓库
+它不是一堆 prompt 模板，而是一套可直接运行的协作基础设施：
+
+- 控制面仓库与业务仓库分离
 - 任务板、通信日志、交接记录
-- branch / worktree 规则约束
-- 基于 hook 的自动建分支
-- 基于 hook 的 Codex 自动 review gate
-- 可供看板或机器人消费的状态导出 JSON
+- 线程分支与 worktree 自动化
+- 基于 hook 的 `codex exec` 自动审核
+- 通过 `AGENTS.md`、`.codex/AGENTS.md`、`.agent/coordination.json` 下发仓库级规则
+- 状态导出，可供 board、bot 或其它工具消费
 
-这个项目来自一个真实私有协作仓的开源化整理版。仓库路径等本机信息已经从代码里解耦，改成了本地 `gitignore` 的配置文件加 bootstrap 脚本。
+## 预览
 
-它现在也会把仓库级 Codex 约束安装到目标仓库中：
+真实 StatusBoard 窗口，使用脱敏样例数据：
 
-- `AGENTS.md`
-- `.codex/AGENTS.md`
-- `.agent/coordination.json`
+![StatusBoard 预览图](docs/images/board-preview.png)
 
-这三份文件用于让各线程 Codex 与自动 review 始终遵守该业务仓库自己的职责边界、协作规则和隐私要求。
+## 这个项目解决什么问题
 
-## 预览图
+Codex 多线程协作常见的失效点通常是：
 
-真实 macOS StatusBoard 预览窗口截图，使用的是脱敏样例数据：
+- 线程职责不清
+- 分支持续漂移并产生冲突
+- review 很容易被绕过
+- 本机路径被误提交
+- 仓库自己的规则无法稳定传达给每个线程
 
-![已脱敏的 board 预览图](docs/images/board-preview.png)
+这个项目用“控制面仓库 + 目标仓库规则安装”的方式处理这些问题。业务代码仍然留在目标仓库，协作规则、日志、hooks、review 流程则由控制面负责。
 
-## 仓库里有什么
+## 核心组成
 
-- `THREADS.json`：Codex 线程注册表
-- `TASK_BOARD.md`：任务看板
-- `COMM_LOG.md`：kickoff / blocker / update 日志
-- `HANDOFFS.md`：正式交接与 merge gate 记录
-- `thread_branch_flow.sh`：创建、审计、合并 branch/worktree，并可选顺带记录任务事件
-- `register_project.sh`：把一个已有项目一键注册进协作机制，顺带完成 bootstrap、hook 安装和 doctor
-- `doctor.sh`：检查配置、git 接线、状态导出和 hook 安装健康度
-- `install_hooks.sh`：给两个仓库安装协作 hooks
-- `scripts/doctor.py`：检查控制面和目标仓库是否已经正确接通
-- `scripts/self_test.py`：在临时仓里执行一遍端到端烟测
-- `scripts/auto_branch_claim.py`：任务进入 `IN_PROGRESS` 后自动建 worktree
-- `scripts/auto_review_gate.py`：在线程分支提交后调用 `codex exec` 做自动 review
-- `scripts/coord_task_event.py`：用一次命令同时更新 `TASK_BOARD.md` 和 `COMM_LOG.md`
-- `scripts/coord_commit_guard.py`：如果线程没有 `IN_PROGRESS` 任务或 kickoff 日志，就阻止目标仓库提交
-- `scripts/export_status.py`：导出状态 JSON，供看板或其它工具使用
-- `tools/StatusBoard/`：原生 macOS 菜单栏状态看板
-- `rewrite_requests/`：review 被阻塞后生成的重写召回单，默认不纳入版本控制
-
-## 仓库模型
-
-这个仓库是控制面，业务仓库保持独立。
-
-控制面负责规则、日志和自动化；业务仓库负责真正被跟踪的代码。各线程在目标仓库的独立 worktree 中工作，并从基线分支创建自己的线程分支。
-
-## 默认 Demo
-
-这个仓库现在自带一个精简的 5 线程 demo，方便你开箱即用地拿它自己来演练协作机制：
-
-- `thread0` / `00-Product`：产品经理与协作 owner
-- `thread1` / `01-Backend`：Python 自动化、hooks 和 review backend
-- `thread2` / `02-Board`：原生 StatusBoard 前端
-- `thread3` / `03-Review`：review gate
-- `thread4` / `04-Readme`：README 和文档
-
-你可以直接把它当 demo 用，也可以编辑 `THREADS.json`、`TASK_BOARD.md`、`OWNERSHIP.md`、`THREAD_BRIEFS.md` 换成自己的模板。
-
-默认 demo 现在混合了两种分支模式：
-
-- `thread1` 使用持久后端分支 `codex/thread1-mainline`
-- 其它生产线程使用按任务创建的 scoped 分支，例如 `codex/thread2-board-polish`
-
-持久分支通过 `coordination.config.json` 里的 `persistent_branches` 配置。对持久线程执行 `thread_branch_flow.sh start` 时，会复用这条分支并先和最新基线分支同步；普通线程仍然按任务新建 `codex/threadX-<scope>` 分支。
-
-如果你把这个仓库直接注册给它自己作为内置 demo，`finish` 会允许 `TASK_BOARD.md`、`COMM_LOG.md`、`HANDOFFS.md`、`reviews/`、`rewrite_requests/`、`runtime/` 这些协作运行产物处于脏状态，不会因为实时任务/Review 更新而卡住 merge back。
+- `THREADS.json`：线程注册表
+- `TASK_BOARD.md`：任务队列与归属
+- `COMM_LOG.md`：kickoff、阻塞、进度日志
+- `HANDOFFS.md`：review 与 merge 交接记录
+- `thread_branch_flow.sh`：启动、审计、收尾分支流程
+- `register_project.sh`：一键注册已有仓库
+- `doctor.sh`：检查配置、hooks、状态导出
+- `tools/StatusBoard/`：原生 macOS 看板
 
 ## 快速开始
 
-1. 把这个仓库 clone 到你希望放控制面的目录。
-2. 一条命令把已有目标仓库注册进协作机制。
-3. 如果修改了 `THREADS.json`，重新生成 starter prompts。
-
 ```bash
-cd /path/to/codex-coordination-kit
+cd /path/to/codex-coordination
 ./register_project.sh --target-repo /path/to/target-repo
 python3 scripts/generate_starter_prompts.py
-python3 scripts/export_status.py
-```
-
-`register_project.sh` 会串起 bootstrap、两个仓库的 hook 安装，以及 doctor 检查。如果你想手工控制步骤，也可以直接执行：
-
-```bash
-./bootstrap.sh --target-repo /path/to/target-repo --install-hooks --doctor
-```
-
-bootstrap 会生成 `coordination.config.json`。这个文件被 `gitignore` 忽略，所以不会把你的本机路径提交到公开仓库。如果目标仓库当前只有 `origin/main` 或 `origin/master`，bootstrap 还会自动补一个本地 tracking branch，确保 branch/worktree 流程可以立即使用。
-
-bootstrap 还会把以下仓库级指令文件安装到目标仓库：
-
-- `AGENTS.md`
-- `.codex/AGENTS.md`
-- `.agent/coordination.json`
-
-如果这些文件已经存在，并且不是由本工具包托管，bootstrap 会保留原文件，不会直接覆盖。
-
-当前仓库自带的 demo 模板默认会启用 `thread1 -> codex/thread1-mainline` 这条持久分支映射。你也可以在本地配置里修改或删除它。
-
-如果注册过程更新了目标仓库的 `.gitignore`，请先在目标仓库基线分支上把这次修改提交掉，再进行第一次 merge back。
-
-启动原生 macOS 看板：
-
-```bash
 tools/StatusBoard/run.sh
 ```
 
-如果想把菜单栏程序改成普通窗口模式，方便录屏或截图：
+注册流程会自动完成：
 
-```bash
-tools/StatusBoard/run.sh --preview-window
-```
+- 写入本地 `coordination.config.json`
+- 给控制面仓库和目标仓库安装 hooks
+- 向目标仓库安装 `AGENTS.md`、`.codex/AGENTS.md`、`.agent/coordination.json`
+- 立即执行 `doctor`，把接线问题直接暴露出来
 
-如果想直接查看仓库自带的脱敏样例数据：
+如果目标仓库当前只有 `origin/main` 或 `origin/master`，bootstrap 也会自动补本地 tracking branch。
 
-```bash
-CODEX_COORDINATION_SNAPSHOT_FILE=tools/StatusBoard/SampleData/sample_status.json \
-tools/StatusBoard/run.sh --preview-window
-```
+## 默认 Demo
 
-看板里显示的是“上一次完整运行实际耗时”，也就是同一线程最近一次 `kickoff` 到后续最新一条日志之间的时长，不是“距离现在过了多久”。线程注册窗口和协作说明窗口都会以独立窗口打开，所以菜单栏弹层收起后表单也不会丢。
+仓库自带一个 5 线程 demo，可直接拿来演示或自举：
 
-## 标准工作流
+- `thread0`：产品 / 协调者
+- `thread1`：后端自动化
+- `thread2`：board 前端
+- `thread3`：review gate
+- `thread4`：README / 文档
 
-1. 在 `TASK_BOARD.md` 中认领任务，并改成 `IN_PROGRESS`。
-2. 让控制面仓库 hook 自动建 branch，或者手动执行。
+其中 `thread1` 默认使用持久分支：
+
+- `codex/thread1-mainline`
+
+每次新任务开始前，这条分支都会先同步到最新基线分支。其它生产线程仍然按任务使用 scoped 分支，例如 `codex/thread2-board-polish`。
+
+## 标准流程
+
+1. 在 `TASK_BOARD.md` 中认领任务。
+2. 启动线程分支，或让 hooks 自动创建。
+3. 只在生成出来的目标仓库 worktree 中改代码。
+4. 在线程分支提交。
+5. 让 hooks 触发 Codex 自动 review。
+6. 收到 `ALLOW_MERGE_TO_BASE` 后再合并，或开启 `auto_finish_on_approve` 自动收尾。
 
 普通 scoped 线程示例：
 
@@ -139,131 +91,70 @@ tools/StatusBoard/run.sh --preview-window
 bash thread_branch_flow.sh start --thread thread2 --scope board-polish --task T2-BOARD-001 --note "kickoff note"
 ```
 
-持久后端线程示例：
+持久 `thread1` 示例：
 
 ```bash
 bash thread_branch_flow.sh start --thread thread1 --task T1-BACKEND-001 --note "kickoff note"
 ```
 
-3. 只在目标仓库生成出来的 worktree 中改代码。
-4. 在线程分支上提交。
-5. 让目标仓库 hook 触发自动 Codex review。
-6. 如果交接记录给出了 `ALLOW_MERGE_TO_BASE`，就手动合并，或者在本地配置里开启 `auto_finish_on_approve`。
-
-审计当前分支状态：
-
-```bash
-bash thread_branch_flow.sh audit
-```
-
-拿到通过的 review handoff 之后合并：
+review 通过后合并：
 
 ```bash
 bash thread_branch_flow.sh finish \
   --branch codex/thread2-board-polish \
   --review-ref H-T3-THREAD2-AUTO-20260314123456 \
-  --task T2-BOARD-001 \
-  --note "merged after thread3 allow" \
+  --task T2-BOARD-001
 ```
 
-如果你不想手工分别改任务板和通信日志，也可以直接用：
+## Hooks 与 Review Gate
 
-```bash
-python3 scripts/coord_task_event.py start --thread thread2 --task T2-BOARD-001 --note "kickoff note"
-python3 scripts/coord_task_event.py finish --thread thread2 --task T2-BOARD-001 --note "completion note"
-```
+安装后的 hooks 会把协作闭环真正接起来：
 
-## Hook 行为
+- 控制面仓库 `post-commit`：为已认领任务自动创建 worktree
+- 目标仓库 `pre-commit`：没有合法 `IN_PROGRESS` 任务和 kickoff 日志时阻止提交
+- 目标仓库 `post-commit`：异步执行 `codex exec --output-schema` 自动审核
+- 目标仓库 `pre-push`：push 前再次触发审核兜底
 
-`install_hooks.sh` 会在两个仓库里安装协作 hooks：
+如果 review 被阻塞，可以自动生成 rewrite request，并重新调用申请者线程继续修复。review 运行器还会按分支加锁，避免连续提交时启动多个重叠审核。
 
-- 控制面仓库 `post-commit`：扫描 `TASK_BOARD.md`，为 `auto_branch: true` 且已进入 `IN_PROGRESS` 的线程自动创建 worktree
-- 持久分支在 merge back 后会保留并自动同步到更新后的基线分支；scoped 分支在 `finish --cleanup-source` 时会被清理
-- 目标仓库 `pre-commit`：如果当前线程分支还没有对应的 `IN_PROGRESS` 任务和 kickoff 日志，就阻止提交
-- 目标仓库 `post-commit`：异步执行 `codex exec --output-schema`，并把结果写入 `reviews/`、`HANDOFFS.md`、`COMM_LOG.md`
-- 目标仓库 `pre-push`：在 push 前再次异步触发同样的 review 流程，作为兜底
-- 如果 review 返回 `BLOCK_MERGE_TO_BASE`，工具会在 `rewrite_requests/` 下生成重写召回单；若开启配置，还会自动重新调用申请者线程继续修复
-- review hook 会在 `runtime/` 下维护按分支划分的锁，避免连续提交时并发跑出多个重叠 review；如果 review 期间同一分支又有新 commit，它会自动追到该分支最新的 commit 再继续审
+## 仓库级 Codex 规则
 
-如果同名 hook 已经存在，安装器会先把原文件挪到 `<hook>.pre-codex-coordination`，然后串起来继续执行。
+目标仓库会安装三份文件：
+
+- `AGENTS.md`
+- `.codex/AGENTS.md`
+- `.agent/coordination.json`
+
+这三份文件才是仓库级行为约束的核心入口。它们用来定义职责边界、协作规则和隐私约束，同时不会泄露本机账号状态或本地认证文件。
+
+如果目标仓库已经有自己维护的这些文件，且不属于本项目托管版本，bootstrap 会保留原文件，不会强制覆盖。
 
 ## 健康检查
 
-任何时候都可以运行：
-
 ```bash
 ./doctor.sh --require-hooks
-```
-
-它会检查：
-
-- 协作仓必需文件是否齐全
-- 本地配置和目标 git 仓库是否接通
-- 基线分支是否可用
-- 仓库级 Codex agent 配置是否存在
-- `codex` 可执行文件是否存在
-- 状态导出是否正常
-- 在 `--require-hooks` 下检查 hooks 是否已经正确安装
-
-如果你想做一次轻量端到端回归烟测，可以运行：
-
-```bash
 python3 scripts/self_test.py
 ```
 
-这条烟测现在会同时覆盖两种场景：控制面和目标仓库分离的标准接入，以及“这个仓库注册给自己”的 demo 自举模式。
+`doctor` 会检查：
 
-## 这个仓库需要单独登录 Codex 吗
+- 协作必需文件
+- 目标仓库接线状态
+- 基线分支可用性
+- 仓库级 agent 配置是否存在
+- `codex` 可执行文件是否可用
+- 状态导出是否正常
+- hooks 是否已安装
 
-这个工具包本身不会附带账号，也不会替你登录。
+## StatusBoard 说明
 
-- 如果运行 hook 的那台机器上，`codex exec` 本来就已经可用，那么这个仓库不需要再额外登录一次。
-- 如果那台机器上的 Codex CLI 还没有登录，自动 review hook 就无法执行 Codex review，直到你先把本地 CLI 登录好。
-- `coordination.config.json` 只应该放本地路径和运行参数，不应该放 token。
+macOS 看板显示的是“上一次完整运行实际耗时”，不是“距离现在过去了多久”。线程注册和协作说明面板会以独立窗口打开，不会因为菜单栏弹层关闭而消失。
 
-## 隐私说明
+## 隐私
 
-- 仓库默认不会跟踪任何本机路径。
-- bootstrap 产生的本机配置写在被忽略的 `coordination.config.json` 中。
-- README 里的预览图来自真实 SwiftUI StatusBoard 程序，但数据是脱敏样例，不含账号信息。
-- 如果你要公开发布自己的 fork，建议不要使用个人邮箱作为 git 提交身份，至少应使用 GitHub noreply 地址或独立 bot 身份。
+- 本机配置只写入被忽略的 `coordination.config.json`
+- 仓库本身不携带任何凭据
+- `AGENTS.md`、`.codex`、`.agent` 中不会写入账号信息
+- 预览图使用的是脱敏样例数据
 
-## 配置项
-
-受版本控制的模板文件：`coordination.config.example.json`
-
-本地运行配置：`coordination.config.json`
-
-字段说明：
-
-- `target_repo`：目标业务仓库绝对路径
-- `base_branch`：创建 worktree 和 merge back 的基线分支，通常是 `main` 或 `master`
-- `worktree_root`：生成 worktree 的绝对路径
-- `codex_command`：调用 Codex 的命令前缀，例如 `["codex"]`
-- `codex_exec_args`：插入到 review 调用里的额外参数，例如 model 参数
-- `auto_finish_on_approve`：review 通过后是否自动执行 `finish`
-- `auto_rewrite_on_block`：review 被阻塞后，是否自动在当前 worktree 重新调用申请者线程修复
-- `max_auto_rewrite_attempts`：同一线程分支上的自动重写最大尝试次数，用来防止死循环
-- `review_timeout_seconds`：单次自动 review 的超时时间；超时后 hook 会记录 blocker 并退出
-- `persistent_branches`：可选的 `thread_id -> branch_name` 映射，用来指定哪些线程复用一条分支，例如 `thread1 -> codex/thread1-mainline`
-
-bootstrap 额外参数：
-
-- `--install-hooks`：在 bootstrap 阶段直接安装 hooks
-- `--doctor`：在 bootstrap 后立刻跑一次健康检查
-- `--codex-exec-arg`：给 `codex exec` 追加额外参数；可重复传入
-- `--persistent-branch`：用 `THREAD_ID=BRANCH` 的形式把某个线程固定到一条可复用分支；可重复传入
-- `--auto-rewrite-on-block`：开启被阻塞 review 后的自动召回重写
-- `--max-auto-rewrite-attempts`：限制自动重写最大尝试次数
-- `--review-timeout-seconds`：配置自动 review 超时时间
-
-## Git 说明
-
-- 最好把这个控制面仓库与目标业务仓库分开存放。
-- 如果 `worktree_root` 在目标仓库内部，bootstrap 会自动把它写进目标仓库的 `.gitignore`。
-- 如果控制面仓库本身嵌套在目标仓库里，bootstrap 也会自动把控制面目录写进目标仓库的 `.gitignore`。
-- 这个项目不强依赖 `master`，基线分支是可配置的。
-
-## 发布
-
-这个仓库可以直接作为公开模板仓或普通公开仓使用。被跟踪的只有通用默认值，所有机器相关配置都留在被忽略的本地配置文件中。
+如果运行 `codex exec` 的机器本来就已经可用 Codex CLI，则不需要为这个项目额外登录。若该机器尚未登录，本地自动 review 在登录前无法运行。
