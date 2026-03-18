@@ -1,0 +1,41 @@
+{
+  "managed_by": "codex-coordination-kit",
+  "version": 1,
+  "entrypoints": [
+    "AGENTS.md",
+    ".codex/AGENTS.md"
+  ],
+  "lanes": {
+    "backend": [
+      "backend/",
+      "server/",
+      "api/",
+      "services/"
+    ],
+    "frontend": [
+      "frontend/",
+      "web/",
+      "ui/",
+      "app/",
+      "assets/"
+    ],
+    "docs": [
+      "README.md",
+      "docs/"
+    ],
+    "tests": [
+      "tests/",
+      "__tests__/"
+    ],
+    "skills": [
+      "skills/",
+      "tools/"
+    ]
+  },
+  "guardrails": [
+    "keep patches scoped to one lane unless the task explicitly spans multiple lanes",
+    "add or update focused tests when behavior changes",
+    "do not commit secrets, auth state, or personal local paths",
+    "respect external coordination and review gates before merge"
+  ]
+}

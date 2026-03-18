@@ -138,11 +138,26 @@ def register_project(control_root: Path, target_repo: Path, fake_codex: Path) ->
         ],
         cwd=control_root,
     )
+    required_repo_agent_files = [
+        "AGENTS.md",
+        ".codex/AGENTS.md",
+        ".agent/coordination.json",
+    ]
+    tracked_after_register = [
+        ".gitignore",
+        *required_repo_agent_files,
+        "THREAD_STARTER_PROMPTS.md",
+    ]
+    existing_tracked_after_register = [path for path in tracked_after_register if (target_repo / path).exists()]
     if (target_repo / ".gitignore").exists():
-        status = run(["git", "status", "--short", "--", ".gitignore"], cwd=target_repo)
+        status = run(["git", "status", "--short", "--", *existing_tracked_after_register], cwd=target_repo)
         if status.stdout.strip():
-            run(["git", "add", ".gitignore"], cwd=target_repo)
+            run(["git", "add", *existing_tracked_after_register], cwd=target_repo)
             run(["git", "commit", "-m", "register codex coordination"], cwd=target_repo)
+
+    for required in required_repo_agent_files:
+        if not (target_repo / required).exists():
+            raise SystemExit(f"Expected repo-level agent config to be installed: {required}")
 
 
 def exercise_thread_flow(control_root: Path, target_repo: Path, kickoff_note: str, review_ref: str, finish_note: str) -> None:

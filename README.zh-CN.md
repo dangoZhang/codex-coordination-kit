@@ -13,6 +13,14 @@ Codex Coordination Kit 用来把一个普通 git 仓库改造成多线程 Codex 
 
 这个项目来自一个真实私有协作仓的开源化整理版。仓库路径等本机信息已经从代码里解耦，改成了本地 `gitignore` 的配置文件加 bootstrap 脚本。
 
+它现在也会把仓库级 Codex 约束安装到目标仓库中：
+
+- `AGENTS.md`
+- `.codex/AGENTS.md`
+- `.agent/coordination.json`
+
+这三份文件用于让各线程 Codex 与自动 review 始终遵守该业务仓库自己的职责边界、协作规则和隐私要求。
+
 ## 预览图
 
 真实 macOS StatusBoard 预览窗口截图，使用的是脱敏样例数据：
@@ -86,6 +94,14 @@ python3 scripts/export_status.py
 ```
 
 bootstrap 会生成 `coordination.config.json`。这个文件被 `gitignore` 忽略，所以不会把你的本机路径提交到公开仓库。如果目标仓库当前只有 `origin/main` 或 `origin/master`，bootstrap 还会自动补一个本地 tracking branch，确保 branch/worktree 流程可以立即使用。
+
+bootstrap 还会把以下仓库级指令文件安装到目标仓库：
+
+- `AGENTS.md`
+- `.codex/AGENTS.md`
+- `.agent/coordination.json`
+
+如果这些文件已经存在，并且不是由本工具包托管，bootstrap 会保留原文件，不会直接覆盖。
 
 当前仓库自带的 demo 模板默认会启用 `thread1 -> codex/thread1-mainline` 这条持久分支映射。你也可以在本地配置里修改或删除它。
 
@@ -184,6 +200,7 @@ python3 scripts/coord_task_event.py finish --thread thread2 --task T2-BOARD-001 
 - 协作仓必需文件是否齐全
 - 本地配置和目标 git 仓库是否接通
 - 基线分支是否可用
+- 仓库级 Codex agent 配置是否存在
 - `codex` 可执行文件是否存在
 - 状态导出是否正常
 - 在 `--require-hooks` 下检查 hooks 是否已经正确安装

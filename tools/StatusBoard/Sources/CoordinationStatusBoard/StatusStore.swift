@@ -201,6 +201,7 @@ final class StatusBoardStore: ObservableObject {
     func buildStarterPrompt(for entry: ThreadRegistryEntry) -> String {
         let rootPath = coordinationRootURL?.path ?? "<coordination-root>"
         let baseBranch = snapshot?.baseBranch ?? "main"
+        let repoConfigNote = "2. 在目标仓库中优先阅读 `AGENTS.md`、`.codex/AGENTS.md`、`.agent/coordination.json`。"
         let persistentBranch = persistentBranch(for: entry.id)
         let startCommand = persistentBranch == nil
             ? "bash thread_branch_flow.sh start --thread \(entry.id) --scope <scope> --task <TASK_ID> --note \"kickoff note\""
@@ -223,10 +224,11 @@ final class StatusBoardStore: ObservableObject {
            - COMM_LOG.md
            - HANDOFFS.md
            - THREADS.json
-        2. 只认领属于你职责范围内的工作。
-        \(branchInstruction)
+        \(repoConfigNote)
+        3. 只认领属于你职责范围内的工作。
+        4. \(branchInstruction.dropFirst(3))
            `\(startCommand)`
-        4. 不要提交代码，直到 TASK_BOARD.md 已经把任务标成 IN_PROGRESS，并且 COMM_LOG.md 里有带任务 ID 的 kickoff。
+        5. 不要提交代码，直到 TASK_BOARD.md 已经把任务标成 IN_PROGRESS，并且 COMM_LOG.md 里有带任务 ID 的 kickoff。
 
         工作过程中：
         - 保持 TASK_BOARD.md 和 COMM_LOG.md 状态最新。

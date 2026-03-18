@@ -5,7 +5,7 @@ import argparse
 import json
 from pathlib import Path
 
-from common import command_exists, coordination_root, git, git_ref_exists, load_config, load_threads, run
+from common import command_exists, coordination_root, git, git_ref_exists, load_config, load_threads, repo_instruction_paths, run
 
 HOOK_MARKER = "# managed-by-codex-coordination-kit"
 
@@ -86,6 +86,13 @@ def main() -> None:
             record("threads", bool(threads), f"{len(threads)} threads")
         except Exception as exc:
             record("threads", False, str(exc))
+
+        instruction_paths = repo_instruction_paths(config.target_repo)
+        record(
+            "repo-agent-config",
+            bool(instruction_paths),
+            ", ".join(instruction_paths) if instruction_paths else "missing AGENTS.md / .codex / .agent config",
+        )
 
         if not args.skip_codex:
             codex_bin = config.codex_command[0] if config.codex_command else "codex"

@@ -140,3 +140,40 @@ def repo_relative_path(parent: Path, child: Path, *, assume_directory: bool = Fa
     if value == ".":
         return None
     return f"{value}/" if assume_directory or child.is_dir() else value
+
+
+def repo_instruction_files(target_repo: Path) -> list[Path]:
+    candidates = [
+        target_repo / "AGENTS.md",
+        target_repo / ".codex" / "AGENTS.md",
+        target_repo / ".codex" / "instructions.md",
+        target_repo / ".agent" / "coordination.md",
+        target_repo / ".agent" / "coordination.json",
+    ]
+    return [path for path in candidates if path.is_file()]
+
+
+def repo_instruction_paths(target_repo: Path) -> list[str]:
+    rendered: list[str] = []
+    for path in repo_instruction_files(target_repo):
+        rel = repo_relative_path(target_repo, path)
+        rendered.append(rel or path.name)
+    return rendered
+
+
+def render_repo_instruction_block(target_repo: Path, max_chars: int = 12000) -> str:
+    sections: list[str] = []
+    remaining = max_chars
+    for path in repo_instruction_files(target_repo):
+        rel = repo_relative_path(target_repo, path) or path.name
+        text = path.read_text(encoding="utf-8").strip()
+        if not text:
+            continue
+        if len(text) > 3000:
+            text = text[:3000].rstrip() + "\n...[truncated]"
+        section = f"File: {rel}\n{text}"
+        if len(section) > remaining:
+            break
+        sections.append(section)
+        remaining -= len(section) + 2
+    return "\n\n".join(sections)

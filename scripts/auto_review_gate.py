@@ -7,7 +7,16 @@ import re
 import subprocess
 from pathlib import Path
 
-from common import current_worktree, load_config, now_compact, now_date, now_stamp, thread_map
+from common import (
+    current_worktree,
+    load_config,
+    now_compact,
+    now_date,
+    now_stamp,
+    render_repo_instruction_block,
+    repo_instruction_paths,
+    thread_map,
+)
 
 
 def detect_thread(branch: str, threads: dict[str, dict]) -> str | None:
@@ -83,8 +92,19 @@ def run_codex_review(
         text=True,
     ).stdout.splitlines()
     changed_block = "\n".join(f"- {name}" for name in changed_files[:40]) if changed_files else "- (unable to resolve changed files)"
+    repo_instruction_list = repo_instruction_paths(target_repo)
+    repo_instruction_block = render_repo_instruction_block(target_repo)
+    instruction_prefix = ""
+    if repo_instruction_block:
+        instruction_prefix = f"""
+Repository-local Codex/agent instructions are configured in: {", ".join(repo_instruction_list)}
+Honor them while reviewing this commit.
+
+{repo_instruction_block}
+
+"""
     prompt = f"""
-You are acting as thread3 / 03-Review for this repository.
+{instruction_prefix}You are acting as thread3 / 03-Review for this repository.
 Review commit {commit_sha} on branch {branch}.
 Prioritize bugs, behavioral regressions, merge risk, and missing tests.
 Focus first on the files changed in this commit and anything directly coupled to them:
@@ -204,6 +224,7 @@ def append_records(
   - Gate decision: `{decision}`
 - Verification done:
   - Codex non-interactive review executed via `codex exec --output-schema`.
+- Repository-local agent config honored: `{"yes" if repo_instruction_paths(config.target_repo) else "no"}`
 - Risks/Open questions:
   - {summary if summary else "No additional summary provided."}
 - Requested action:

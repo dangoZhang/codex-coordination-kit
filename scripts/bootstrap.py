@@ -5,7 +5,21 @@ import argparse
 import json
 from pathlib import Path
 
-from common import command_exists, coordination_root, git, git_ref_exists, load_threads, repo_relative_path, run
+from common import (
+    command_exists,
+    coordination_root,
+    git,
+    git_ref_exists,
+    load_threads,
+    repo_instruction_paths,
+    repo_relative_path,
+    run,
+)
+
+MANAGED_MARKERS = (
+    "managed-by-codex-coordination-kit",
+    '"managed_by": "codex-coordination-kit"',
+)
 
 
 def detect_remote_base_branch(target_repo: Path) -> str | None:
@@ -116,6 +130,40 @@ def parse_persistent_branches(values: list[str], root: Path) -> dict[str, str]:
     return mapping
 
 
+def template_root(root: Path) -> Path:
+    return root / "templates" / "repo"
+
+
+def install_repo_instruction_templates(root: Path, target_repo: Path) -> tuple[list[str], list[str]]:
+    source_root = template_root(root)
+    copies = [
+        ("AGENTS.md", "AGENTS.md"),
+        (".codex/AGENTS.md", ".codex/AGENTS.md"),
+        (".agent/coordination.json", ".agent/coordination.json"),
+    ]
+    installed: list[str] = []
+    preserved: list[str] = []
+
+    for src_rel, dst_rel in copies:
+        src = source_root / src_rel
+        dst = target_repo / dst_rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        rel = repo_relative_path(target_repo, dst) or dst_rel
+        if not dst.exists():
+            dst.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+            installed.append(rel)
+            continue
+
+        existing = dst.read_text(encoding="utf-8")
+        if any(marker in existing for marker in MANAGED_MARKERS):
+            dst.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+            installed.append(rel)
+        else:
+            preserved.append(rel)
+
+    return installed, preserved
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Bootstrap Codex Coordination Kit against an existing git project."
@@ -201,6 +249,7 @@ def main() -> None:
     }
     config_path = root / "coordination.config.json"
     config_path.write_text(json.dumps(config, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    installed_instruction_files, preserved_instruction_files = install_repo_instruction_templates(root, target_repo)
 
     entries: list[str] = []
     worktree_entry = repo_relative_path(target_repo, worktree_root, assume_directory=True)
@@ -240,6 +289,19 @@ def main() -> None:
         print("Commit the target repo .gitignore on the base branch before your first merge-back.")
     else:
         print("Target repo .gitignore did not need changes.")
+    if installed_instruction_files:
+        print("Installed repo-level Codex agent config:")
+        for entry in installed_instruction_files:
+            print(f"  - {entry}")
+    if preserved_instruction_files:
+        print("Preserved existing repo-level agent config:")
+        for entry in preserved_instruction_files:
+            print(f"  - {entry}")
+    active_instruction_paths = repo_instruction_paths(target_repo)
+    if active_instruction_paths:
+        print("Active repo-level instruction files:")
+        for entry in active_instruction_paths:
+            print(f"  - {entry}")
     if args.install_hooks:
         print("Installed coordination hooks.")
     if args.doctor:

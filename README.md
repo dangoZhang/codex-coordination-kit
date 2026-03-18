@@ -13,6 +13,14 @@ Codex Coordination Kit turns a plain git repo into a multi-thread Codex workflow
 
 The project is a reusable, open-source rewrite of a live private coordination workspace. Hard-coded repo paths were removed and replaced with a local gitignored config file plus bootstrap scripts.
 
+It also installs repository-local Codex guidance into the target repo via:
+
+- `AGENTS.md`
+- `.codex/AGENTS.md`
+- `.agent/coordination.json`
+
+Those files are used to keep Codex threads and automated review aligned with repo-specific ownership, guardrails, and privacy rules.
+
 ## Preview
 
 Actual macOS StatusBoard preview window, captured with sanitized sample data:
@@ -86,6 +94,14 @@ python3 scripts/export_status.py
 ```
 
 Bootstrap writes `coordination.config.json`, which is gitignored so local paths stay out of the public repo. If the target repo only has `origin/main` or `origin/master`, bootstrap will create the matching local tracking branch automatically so branch/worktree flow works immediately.
+
+Bootstrap also installs repo-level instruction files into the target repo:
+
+- `AGENTS.md`
+- `.codex/AGENTS.md`
+- `.agent/coordination.json`
+
+If those files already exist and are not managed by this kit, bootstrap preserves them instead of overwriting them.
 
 The tracked demo template enables `thread1 -> codex/thread1-mainline` as a persistent branch by default. You can edit or remove that mapping in local config.
 
@@ -184,6 +200,7 @@ This validates:
 - required coordination files
 - local config and target git repo wiring
 - base branch availability
+- repo-level Codex agent config presence
 - `codex` executable presence
 - status export health
 - installed hook files when `--require-hooks` is used
